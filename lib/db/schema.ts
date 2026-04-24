@@ -1,8 +1,6 @@
 // lib/db/schema.ts
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
-
-// 临时类型定义,Task 6 会替换为 import type from '../validation'
-type ExtractedResume = Record<string, unknown>;
+import type { ExtractedResume } from '../validation';
 
 export const CANDIDATE_STATUS = [
   '待筛选', '初筛通过', '面试中', '已录用', '已淘汰',

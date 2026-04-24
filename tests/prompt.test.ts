@@ -37,7 +37,8 @@ describe('prompt constants', () => {
     expect(STUB_RESULT.projects.length).toBeGreaterThan(0);
   });
 
-  it('STUB_RESULT has targetRole', () => {
+  it('STUB_RESULT has non-empty targetRole', () => {
+    expect(STUB_RESULT.targetRole).toBeTruthy();
     expect(typeof STUB_RESULT.targetRole).toBe('string');
   });
 });

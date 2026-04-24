@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import AppChrome from '@/components/AppChrome';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -21,7 +22,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <AppChrome />
+        <main className="app-shell">{children}</main>
+      </body>
     </html>
   );
 }

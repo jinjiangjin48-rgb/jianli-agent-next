@@ -6,7 +6,7 @@
 
 **Architecture:** Next.js 15 App Router(RSC + Client 组件混合);`better-sqlite3` 同步驱动 + `drizzle-orm`;进程内 `p-queue` 顺序消费提取任务(concurrency=1);客户端 `p-limit(5)` 控制上传并发,2s 轮询拿提取状态;DeepSeek 通过 `openai` SDK 兼容接口调用。
 
-**Tech Stack:** Next.js 15 · TypeScript · better-sqlite3 · drizzle-orm/kit · openai (DeepSeek) · pdf-parse · nanoid · p-queue · p-limit · zod · vitest
+**Tech Stack:** Next.js 15 · TypeScript · better-sqlite3 · drizzle-orm/kit · openai (DeepSeek) · pdf-parse · nanoid · p-queue · p-limit · zod · vitest (scaffolded with create-next-app@latest which installed Next.js 16; all App Router APIs in this plan are compatible)
 
 **Spec:** `docs/superpowers/specs/2026-04-24-sift-mvp-nextjs-sqlite-design.md`
 
@@ -18,7 +18,7 @@
 
 | 路径 | 责任 | 首次出现的任务 |
 |---|---|---|
-| `package.json` · `tsconfig.json` · `next.config.mjs` · `.gitignore` · `.env.local.example` | 工程脚手架 | 1 |
+| `package.json` · `tsconfig.json` · `next.config.ts` · `.gitignore` · `.env.local.example` | 工程脚手架 | 1 |
 | `drizzle.config.ts` · `vitest.config.ts` · `vitest.setup.ts` | 工具配置 | 3 |
 | `app/globals.css` | 导入 tokens + app.css | 3 |
 | `public/assets/{logo,logo-mark,brand-gradient}.svg` | 品牌资产(从 `jianli-agent/public/assets/` 拷贝) | 3 |

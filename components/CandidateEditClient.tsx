@@ -8,19 +8,21 @@ import type { Candidate } from '@/lib/db/schema';
 export default function CandidateEditClient({ initial }: { initial: Candidate }) {
   const router = useRouter();
   const [form, setForm] = useState({
-    name:     initial.name ?? '',
-    email:    initial.email ?? '',
-    phone:    initial.phone ?? '',
-    city:     initial.city ?? '',
-    role:     initial.role ?? '',
-    company:  initial.company ?? '',
-    years:    initial.years ?? 0,
-    school:   initial.school ?? '',
-    major:    initial.major ?? '',
-    degree:   initial.degree ?? '',
-    gradYear: initial.gradYear ?? 0,
-    skills:   (initial.skills ?? []).join(', '),
-    summary:  initial.summary ?? '',
+    name:       initial.name ?? '',
+    email:      initial.email ?? '',
+    phone:      initial.phone ?? '',
+    city:       initial.city ?? '',
+    age:        initial.age ?? '',
+    targetRole: initial.targetRole ?? '',
+    role:       initial.role ?? '',
+    company:    initial.company ?? '',
+    years:      initial.years ?? 0,
+    school:     initial.school ?? '',
+    major:      initial.major ?? '',
+    degree:     initial.degree ?? '',
+    gradDate:   initial.gradDate ?? '',
+    skills:     (initial.skills ?? []).join(', '),
+    summary:    initial.summary ?? '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -30,19 +32,21 @@ export default function CandidateEditClient({ initial }: { initial: Candidate })
   async function save() {
     setSaving(true);
     const body = {
-      name:  form.name  || null,
-      email: form.email || null,
-      phone: form.phone || null,
-      city:  form.city  || null,
-      role:  form.role  || null,
-      company: form.company || null,
-      years: Number(form.years) || null,
-      school: form.school || null,
-      major:  form.major  || null,
-      degree: form.degree || null,
-      gradYear: Number(form.gradYear) || null,
-      skills: form.skills.split(',').map((s) => s.trim()).filter(Boolean),
-      summary: form.summary,
+      name:       form.name    || null,
+      email:      form.email   || null,
+      phone:      form.phone   || null,
+      city:       form.city    || null,
+      age:        form.age === '' ? null : Number(form.age),
+      targetRole: form.targetRole || null,
+      role:       form.role    || null,
+      company:    form.company || null,
+      years:      Number(form.years) || null,
+      school:     form.school  || null,
+      major:      form.major   || null,
+      degree:     form.degree  || null,
+      gradDate:   form.gradDate || null,
+      skills:     form.skills.split(',').map((s) => s.trim()).filter(Boolean),
+      summary:    form.summary,
     };
     const r = await fetch(`/api/candidates/${initial.id}`, {
       method: 'PATCH',
@@ -81,6 +85,8 @@ export default function CandidateEditClient({ initial }: { initial: Candidate })
               <div><div style={labelStyle}>邮箱</div><Input value={form.email} onChange={setField('email') as any} /></div>
               <div><div style={labelStyle}>电话</div><Input value={form.phone} onChange={setField('phone') as any} /></div>
               <div><div style={labelStyle}>城市</div><Input value={form.city} onChange={setField('city') as any} /></div>
+              <div><div style={labelStyle}>年龄</div><Input type="number" value={form.age} onChange={setField('age') as any} /></div>
+              <div><div style={labelStyle}>求职意向</div><Input value={form.targetRole} onChange={setField('targetRole') as any} /></div>
             </div>
           </Card>
 
@@ -99,7 +105,7 @@ export default function CandidateEditClient({ initial }: { initial: Candidate })
               <div><div style={labelStyle}>学校</div><Input value={form.school} onChange={setField('school') as any} /></div>
               <div><div style={labelStyle}>专业</div><Input value={form.major} onChange={setField('major') as any} /></div>
               <div><div style={labelStyle}>学历</div><Input value={form.degree} onChange={setField('degree') as any} /></div>
-              <div><div style={labelStyle}>毕业</div><Input type="number" value={form.gradYear} onChange={setField('gradYear') as any} /></div>
+              <div><div style={labelStyle}>毕业时间</div><Input placeholder="如 2019.07" value={form.gradDate} onChange={setField('gradDate') as any} /></div>
             </div>
           </Card>
 

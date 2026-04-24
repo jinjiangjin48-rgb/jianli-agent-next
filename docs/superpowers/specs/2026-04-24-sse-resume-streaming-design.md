@@ -88,9 +88,13 @@
 |---|---|---|---|
 | `snapshot` | 连上时 extraction 仍在进行 | `{ partial: Partial<ExtractedResume> }` | 用 partial 覆盖初始 streaming 状态 |
 | `delta` | worker 解析出一个完整单元 | `{ path: string, value: any }` | 按 path 写入 client state |
-| `done` | LLM 流成功 + schema 校验通过 + 落库成功 | `{ candidate: Candidate }` | 替换本地状态；close EventSource |
-| `error` | 任意阶段失败 | `{ message: string }`（走 `toUserMessage`） | 回滚到错误卡片；close EventSource |
+| `done` | LLM 流成功 + schema 校验通过 + 落库成功；**或**客户端连上时 extraction 已 `parsed` | `{ candidate: Candidate }` | 替换本地状态；close EventSource |
+| `error` | 任意阶段失败；**或**客户端连上时 extraction 已 `error` | `{ message: string }`（走 `toUserMessage`） | 回滚到错误卡片；close EventSource |
 | `:hb` (comment) | 每 15s | — | 无；仅防代理断流 |
+
+`snapshot.partial` 的形状约定：**仅包含已 publish 过 `delta` 的 path**（用 key 缺省表达"未到"）。客户端合并时：key 存在 = 用 value 覆盖 state；key 缺省 = 保持当前骨架态。这条约定让 snapshot 语义与 `delta` 序列严格对齐——snapshot 等价于"把历史所有 delta 按 path 合并成一个对象"。
+
+`done` 事件在两种路径下的 `candidate` 来源：worker 落库成功路径下由 worker 在 publish 时直接携带；客户端打开时已 `parsed` 的短路路径下由 SSE route 从 DB 读取构造。
 
 **`path` 语法**（受限 jsonpath）：
 - 顶层：`basic` / `targetRole` / `skills` / `summary`；

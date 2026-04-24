@@ -56,12 +56,22 @@ export default function CandidateDetailClient({ initial }: { initial: Candidate 
               <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--fg)', margin: 0 }}>{c.name ?? '(未提取)'}</h1>
               {c.extractionStatus === 'parsed' && <StatusPill status={c.status} />}
             </div>
+            {c.extractionStatus === 'parsed' && c.targetRole && (
+              <div style={{ marginTop: 6 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 4,
+                  fontSize: 12, fontWeight: 500,
+                  background: 'var(--accent-bg-subtle)', color: 'var(--accent-700)',
+                }}>🎯 {c.targetRole}</span>
+              </div>
+            )}
             {c.extractionStatus === 'parsed' && (
               <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 13, color: 'var(--fg-muted)', flexWrap: 'wrap' }}>
                 {c.role && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Briefcase size={13} />{c.role}</span>}
                 {c.city && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.MapPin size={13} />{c.city}</span>}
                 {c.email && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Mail size={13} />{c.email}</span>}
                 {c.phone && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Phone size={13} />{c.phone}</span>}
+                {c.age != null && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>🎂 {c.age} 岁</span>}
               </div>
             )}
           </div>
@@ -90,31 +100,114 @@ export default function CandidateDetailClient({ initial }: { initial: Candidate 
             </Card>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 1200 }}>
+              {/* AI 评语 */}
               <Card style={{ padding: 18, gridColumn: 'span 2' }}>
                 <div style={{ fontSize: 11, color: 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 500, marginBottom: 10 }}>AI 评语</div>
-                <p style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--fg)', margin: 0 }}>{c.summary ?? '无'}</p>
+                <p style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--fg)', margin: 0 }}>{c.summary ?? '—'}</p>
               </Card>
+
+              {/* 工作经历(全部) */}
               <Card style={{ padding: 18 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>工作经历(最新)</div>
-                <div style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent-300)' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{c.company ?? '—'} · {c.role ?? '—'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>{c.years ?? '—'} 年</div>
-                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>工作经历</div>
+                {(c.extractedJson?.works?.length ?? 0) === 0 ? (
+                  <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>—</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {c.extractedJson!.works.map((w, i) => (
+                      <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent-300)' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{w.company} · {w.role ?? '—'}</div>
+                        <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
+                          {(w.startDate ?? '—')} — {(w.endDate ?? '—')}
+                        </div>
+                        {w.highlights.length > 0 && (
+                          <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '6px 0 0 14px', padding: 0, lineHeight: 1.6 }}>
+                            {w.highlights.map((h, j) => <li key={j}>{h}</li>)}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Card>
+
+              {/* 教育背景(全部) */}
               <Card style={{ padding: 18 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>教育背景</div>
-                <div style={{ paddingLeft: 12, borderLeft: '2px solid var(--info-300)' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{c.school ?? '—'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}>{c.major ?? '—'} · {c.degree ?? '—'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>毕业 {c.gradYear ?? '—'}</div>
-                </div>
+                {(c.extractedJson?.educations?.length ?? 0) === 0 ? (
+                  <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>—</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {c.extractedJson!.educations.map((e, i) => (
+                      <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--info-300)' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{e.school}</div>
+                        <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}>
+                          {e.major ?? '—'} · {e.degree ?? '—'}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
+                          {(e.startDate ?? '—')} — {(e.endDate ?? '—')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Card>
+
+              {/* 项目经历(全部) */}
+              <Card style={{ padding: 18, gridColumn: 'span 2' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>项目经历</div>
+                {(c.extractedJson?.projects?.length ?? 0) === 0 ? (
+                  <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>—</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    {c.extractedJson!.projects.map((p, i) => (
+                      <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent)' }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 14, fontWeight: 600 }}>{p.name}</span>
+                          {p.role && <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>· {p.role}</span>}
+                          {(p.startDate || p.endDate) && (
+                            <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
+                              · {(p.startDate ?? '—')} — {(p.endDate ?? '—')}
+                            </span>
+                          )}
+                          {p.url && (
+                            <a
+                              href={p.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ fontSize: 12, color: 'var(--accent)', marginLeft: 'auto' }}
+                            >
+                              🔗 {new URL(p.url).host}
+                            </a>
+                          )}
+                        </div>
+                        {p.techStack.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                            {p.techStack.map((t, j) => <SkillTag key={j}>{t}</SkillTag>)}
+                          </div>
+                        )}
+                        {p.description && (
+                          <div style={{ fontSize: 13, color: 'var(--fg)', marginTop: 8, lineHeight: 1.6 }}>{p.description}</div>
+                        )}
+                        {p.highlights.length > 0 && (
+                          <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '8px 0 0 14px', padding: 0, lineHeight: 1.65 }}>
+                            {p.highlights.map((h, j) => <li key={j}>{h}</li>)}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
+              {/* 技能 */}
               <Card style={{ padding: 18, gridColumn: 'span 2' }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>技能</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {(c.skills ?? []).map((s) => <SkillTag key={s}>{s}</SkillTag>)}
                 </div>
               </Card>
+
+              {/* 状态流转 */}
               <Card style={{ padding: 18, gridColumn: 'span 2' }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>状态流转</div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

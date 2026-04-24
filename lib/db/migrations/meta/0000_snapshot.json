@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "bb61d338-ad18-46e1-8857-f5a1d436025b",
+  "id": "13e3f515-ad2f-4cf2-a91a-92a053803dc3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "candidates": {
@@ -37,6 +37,20 @@
         },
         "city": {
           "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "age": {
+          "name": "age",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "target_role": {
+          "name": "target_role",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -84,9 +98,9 @@
           "notNull": false,
           "autoincrement": false
         },
-        "grad_year": {
-          "name": "grad_year",
-          "type": "integer",
+        "grad_date": {
+          "name": "grad_date",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

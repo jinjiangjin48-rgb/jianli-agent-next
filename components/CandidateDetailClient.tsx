@@ -155,10 +155,29 @@ function StreamingSections({
 
   const summaryPending = isStreaming && streaming?.summary === undefined;
   const skillsPending  = isStreaming && streaming?.skills  === undefined;
-  // 数组:length=0 且流未完 → 骨架;流结束 length=0 → "—"
   const edus  = src.educations ?? [];
   const works = src.works      ?? [];
   const prjs  = src.projects   ?? [];
+
+  // schema 顺序:educations → works → projects → skills → summary
+  // 后一个字段出现意味着前面的 section 已封口,可以收掉尾部骨架。
+  const eduDone = !isStreaming
+    || works.length > 0
+    || prjs.length > 0
+    || streaming?.skills !== undefined
+    || streaming?.summary !== undefined;
+  const worksDone = !isStreaming
+    || prjs.length > 0
+    || streaming?.skills !== undefined
+    || streaming?.summary !== undefined;
+  const projectsDone = !isStreaming
+    || streaming?.skills !== undefined
+    || streaming?.summary !== undefined;
+
+  // 流式中:已到的真实项 + 后续骨架(至少占满 min,或在数据多于 min 时永远留 1 条尾骨架)
+  // 完成后:只渲染真实项,空数组返回 0(由调用方渲染 "—")
+  const slotsFor = (count: number, done: boolean, min: number): number =>
+    done ? count : Math.max(count + 1, min);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 1200 }}>
@@ -177,110 +196,126 @@ function StreamingSections({
       {/* 工作经历 */}
       <Card style={{ padding: 18 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>工作经历</div>
-        {works.length === 0 && isStreaming ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {Array.from({ length: 2 }).map((_, i) => (
-              <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <Skeleton.Line w="70%" h={13} /><Skeleton.Line w="40%" h={11} /><Skeleton.Line w="85%" h={11} />
-              </div>
-            ))}
-          </div>
-        ) : works.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>—</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {works.map((w, i) => (
-              <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent-300)' }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{w.company} · {w.role ?? '—'}</div>
-                <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
-                  {(w.startDate ?? '—')} — {(w.endDate ?? '—')}
-                </div>
-                {w.highlights.length > 0 && (
-                  <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '6px 0 0 14px', padding: 0, lineHeight: 1.6 }}>
-                    {w.highlights.map((h, j) => <li key={j}>{h}</li>)}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        {(() => {
+          const slots = slotsFor(works.length, worksDone, 2);
+          if (slots === 0) return <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>—</div>;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {Array.from({ length: slots }).map((_, i) => {
+                if (i < works.length) {
+                  const w = works[i];
+                  return (
+                    <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent-300)' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{w.company} · {w.role ?? '—'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
+                        {(w.startDate ?? '—')} — {(w.endDate ?? '—')}
+                      </div>
+                      {w.highlights.length > 0 && (
+                        <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '6px 0 0 14px', padding: 0, lineHeight: 1.6 }}>
+                          {w.highlights.map((h, j) => <li key={j}>{h}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                }
+                return (
+                  <div key={`sk-${i}`} style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <Skeleton.Line w="70%" h={13} /><Skeleton.Line w="40%" h={11} /><Skeleton.Line w="85%" h={11} />
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </Card>
 
       {/* 教育背景 */}
       <Card style={{ padding: 18 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>教育背景</div>
-        {edus.length === 0 && isStreaming ? (
-          <div style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <Skeleton.Line w="70%" h={13} /><Skeleton.Line w="50%" h={11} /><Skeleton.Line w="40%" h={11} />
-          </div>
-        ) : edus.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>—</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {edus.map((e, i) => (
-              <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--info-300)' }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{e.school}</div>
-                <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}>
-                  {e.major ?? '—'} · {e.degree ?? '—'}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
-                  {(e.startDate ?? '—')} — {(e.endDate ?? '—')}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        {(() => {
+          const slots = slotsFor(edus.length, eduDone, 1);
+          if (slots === 0) return <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>—</div>;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {Array.from({ length: slots }).map((_, i) => {
+                if (i < edus.length) {
+                  const e = edus[i];
+                  return (
+                    <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--info-300)' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{e.school}</div>
+                      <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}>
+                        {e.major ?? '—'} · {e.degree ?? '—'}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
+                        {(e.startDate ?? '—')} — {(e.endDate ?? '—')}
+                      </div>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={`sk-${i}`} style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <Skeleton.Line w="70%" h={13} /><Skeleton.Line w="50%" h={11} /><Skeleton.Line w="40%" h={11} />
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </Card>
 
       {/* 项目经历 */}
       <Card style={{ padding: 18, gridColumn: 'span 2' }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>项目经历</div>
-        {prjs.length === 0 && isStreaming ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <Skeleton.Line w="40%" h={14} /><Skeleton.Line w="90%" h={12} /><Skeleton.Line w="75%" h={12} />
-              </div>
-            ))}
-          </div>
-        ) : prjs.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>—</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {prjs.map((p, i) => (
-              <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent)' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>{p.name}</span>
-                  {p.role && <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>· {p.role}</span>}
-                  {(p.startDate || p.endDate) && (
-                    <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
-                      · {(p.startDate ?? '—')} — {(p.endDate ?? '—')}
-                    </span>
-                  )}
-                  {p.url && (
-                    <a href={p.url} target="_blank" rel="noopener noreferrer"
-                       style={{ fontSize: 12, color: 'var(--accent)', marginLeft: 'auto' }}>
-                      🔗 {new URL(p.url).host}
-                    </a>
-                  )}
-                </div>
-                {p.techStack.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
-                    {p.techStack.map((t, j) => <SkillTag key={j}>{t}</SkillTag>)}
+        {(() => {
+          const slots = slotsFor(prjs.length, projectsDone, 3);
+          if (slots === 0) return <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>—</div>;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {Array.from({ length: slots }).map((_, i) => {
+                if (i < prjs.length) {
+                  const p = prjs[i];
+                  return (
+                    <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent)' }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 14, fontWeight: 600 }}>{p.name}</span>
+                        {p.role && <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>· {p.role}</span>}
+                        {(p.startDate || p.endDate) && (
+                          <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
+                            · {(p.startDate ?? '—')} — {(p.endDate ?? '—')}
+                          </span>
+                        )}
+                        {p.url && (
+                          <a href={p.url} target="_blank" rel="noopener noreferrer"
+                             style={{ fontSize: 12, color: 'var(--accent)', marginLeft: 'auto' }}>
+                            🔗 {new URL(p.url).host}
+                          </a>
+                        )}
+                      </div>
+                      {p.techStack.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                          {p.techStack.map((t, j) => <SkillTag key={j}>{t}</SkillTag>)}
+                        </div>
+                      )}
+                      {p.description && (
+                        <div style={{ fontSize: 13, color: 'var(--fg)', marginTop: 8, lineHeight: 1.6 }}>{p.description}</div>
+                      )}
+                      {p.highlights.length > 0 && (
+                        <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '8px 0 0 14px', padding: 0, lineHeight: 1.65 }}>
+                          {p.highlights.map((h, j) => <li key={j}>{h}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                }
+                return (
+                  <div key={`sk-${i}`} style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <Skeleton.Line w="40%" h={14} /><Skeleton.Line w="90%" h={12} /><Skeleton.Line w="75%" h={12} />
                   </div>
-                )}
-                {p.description && (
-                  <div style={{ fontSize: 13, color: 'var(--fg)', marginTop: 8, lineHeight: 1.6 }}>{p.description}</div>
-                )}
-                {p.highlights.length > 0 && (
-                  <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '8px 0 0 14px', padding: 0, lineHeight: 1.65 }}>
-                    {p.highlights.map((h, j) => <li key={j}>{h}</li>)}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          );
+        })()}
       </Card>
 
       {/* 技能 */}

@@ -75,3 +75,11 @@ export const STUB_RESULT: ExtractedResume = {
   skills: ['React', 'TypeScript', 'Next.js', 'Node.js', 'GraphQL'],
   summary: '在前端性能优化与大型 SPA 架构方面有深入积累。',
 };
+
+export const STUB_STREAM_CHUNKS: string[] = (() => {
+  const json = JSON.stringify(STUB_RESULT);
+  const size = 60;
+  const out: string[] = [];
+  for (let i = 0; i < json.length; i += size) out.push(json.slice(i, i + size));
+  return out;
+})();

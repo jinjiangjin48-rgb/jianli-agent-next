@@ -9,6 +9,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { eq } from 'drizzle-orm';
 import { candidates } from '@/lib/db/schema';
 
+
 describe('runExtraction (stub LLM + fixture PDF)', () => {
   let dir: string;
   const sampleBuf = readFileSync('tests/fixtures/sample.pdf');
@@ -19,6 +20,7 @@ describe('runExtraction (stub LLM + fixture PDF)', () => {
     process.env.DATABASE_URL = join(dir, 'test.db');
     process.env.UPLOADS_DIR  = join(dir, 'uploads');
     delete (globalThis as any).__sqlite;
+    delete (globalThis as any).__streamEventBus;
   });
 
   it('parses fixture PDF and writes flat fields + extracted_json', async () => {
@@ -78,5 +80,68 @@ describe('runExtraction (stub LLM + fixture PDF)', () => {
     expect(row?.extractionStatus).toBe('error');
     expect(row?.extractionError).toBeTruthy();
     sqlite2.close();
+  });
+
+  it('publishes deltas + done event to the event bus during extraction', async () => {
+    const sqlite = new Database(process.env.DATABASE_URL!);
+    sqlite.pragma('journal_mode = WAL');
+    const d = drizzle(sqlite);
+    migrate(d, { migrationsFolder: './lib/db/migrations' });
+
+    mkdirSync(process.env.UPLOADS_DIR!, { recursive: true });
+    writeFileSync(join(process.env.UPLOADS_DIR!, 'pub1.pdf'), sampleBuf);
+
+    d.insert(candidates).values({
+      id: 'pub1',
+      pdfPath: `${process.env.UPLOADS_DIR}/pub1.pdf`,
+      pdfSize: sampleBuf.length,
+      createdAt: new Date(), updatedAt: new Date(),
+    }).run();
+    sqlite.close();
+
+    const bus = await import('@/lib/extraction/event-bus');
+    const events: any[] = [];
+    const sub = bus.subscribe('pub1', (e) => events.push(e));
+
+    const { runExtraction } = await import('@/lib/extraction/worker');
+    await runExtraction('pub1');
+    sub.unsubscribe();
+
+    const types = events.map((e) => e.type);
+    expect(types).toContain('delta');
+    expect(types[types.length - 1]).toBe('done');
+
+    const last = events[events.length - 1];
+    expect(last.candidate.id).toBe('pub1');
+    expect(last.candidate.extractionStatus).toBe('parsed');
+
+    // 清理后 snapshot 应当被清空
+    expect(bus.getSnapshot('pub1')).toEqual({});
+  });
+
+  it('publishes error event when PDF missing', async () => {
+    const sqlite = new Database(process.env.DATABASE_URL!);
+    const d = drizzle(sqlite);
+    migrate(d, { migrationsFolder: './lib/db/migrations' });
+
+    d.insert(candidates).values({
+      id: 'bad1',
+      pdfPath: `${process.env.UPLOADS_DIR}/nope.pdf`,
+      pdfSize: 0,
+      createdAt: new Date(), updatedAt: new Date(),
+    }).run();
+    sqlite.close();
+
+    const bus = await import('@/lib/extraction/event-bus');
+    const events: any[] = [];
+    const sub = bus.subscribe('bad1', (e) => events.push(e));
+
+    const { runExtraction } = await import('@/lib/extraction/worker');
+    await runExtraction('bad1');
+    sub.unsubscribe();
+
+    const last = events[events.length - 1];
+    expect(last.type).toBe('error');
+    expect(last.message).toBeTruthy();
   });
 });

@@ -289,15 +289,3 @@ body {
 /* Remove default focus outline; we use shadow-focus on inputs/buttons */
 button, input, textarea, select { font: inherit; color: inherit; }
 a { color: inherit; }
-
-@keyframes sift-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [aria-hidden="true"][style*="sift-shimmer"] {
-    animation: none !important;
-    background: var(--bg-sunken) !important;
-  }
-}

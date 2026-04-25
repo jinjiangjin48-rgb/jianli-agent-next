@@ -82,7 +82,7 @@ describe('runExtraction (stub LLM + fixture PDF)', () => {
     sqlite2.close();
   });
 
-  it('publishes deltas + done event to the event bus during extraction', async () => {
+  it('publishes chunks + done event to the event bus during extraction', async () => {
     const sqlite = new Database(process.env.DATABASE_URL!);
     sqlite.pragma('journal_mode = WAL');
     const d = drizzle(sqlite);
@@ -108,15 +108,15 @@ describe('runExtraction (stub LLM + fixture PDF)', () => {
     sub.unsubscribe();
 
     const types = events.map((e) => e.type);
-    expect(types).toContain('delta');
+    expect(types).toContain('chunk');
     expect(types[types.length - 1]).toBe('done');
 
     const last = events[events.length - 1];
     expect(last.candidate.id).toBe('pub1');
     expect(last.candidate.extractionStatus).toBe('parsed');
 
-    // 清理后 snapshot 应当被清空
-    expect(bus.getSnapshot('pub1')).toEqual({});
+    // 清理后 buffer 应当被清空
+    expect(bus.getBuffer('pub1')).toBe('');
   });
 
   it('publishes error event when PDF missing', async () => {

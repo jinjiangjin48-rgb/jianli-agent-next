@@ -8,7 +8,6 @@ import { callDeepSeekStream } from './llm';
 import { ExtractedResume } from '../validation';
 import { ExtractionError, toUserMessage } from '../errors';
 import { deriveFlat } from './derive';
-import { createStreamEmitter } from './stream-emitter';
 import * as bus from './event-bus';
 
 export async function runExtraction(id: string): Promise<void> {
@@ -26,15 +25,18 @@ export async function runExtraction(id: string): Promise<void> {
     const { text, numpages } = await parsePdf(buf);
     if (!text.trim()) throw new ExtractionError('pdf_empty');
 
-    const emitter = createStreamEmitter();
+    let buffer = '';
     for await (const chunk of callDeepSeekStream(text)) {
-      for (const d of emitter.feed(chunk)) {
-        bus.publish(id, { type: 'delta', path: d.path, value: d.value });
-      }
+      buffer += chunk;
+      bus.publish(id, { type: 'chunk', text: chunk });
     }
-    const { deltas, raw } = emitter.finalize();
-    for (const d of deltas) {
-      bus.publish(id, { type: 'delta', path: d.path, value: d.value });
+
+    if (!buffer.trim()) throw new ExtractionError('llm_empty');
+    let raw: unknown;
+    try {
+      raw = JSON.parse(buffer);
+    } catch {
+      throw new ExtractionError('llm_invalid_json');
     }
 
     const parsed = ExtractedResume.parse(raw);

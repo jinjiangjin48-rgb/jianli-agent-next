@@ -41,10 +41,10 @@ export async function GET(req: Request, ctx: Ctx) {
         return;
       }
 
-      // Live: subscribe, then emit current snapshot
+      // Live: subscribe, then emit current buffer snapshot
       const sub = bus.subscribe(id, (event) => {
-        if (event.type === 'delta') {
-          send('delta', { path: event.path, value: event.value });
+        if (event.type === 'chunk') {
+          send('chunk', { text: event.text });
         } else if (event.type === 'done') {
           send('done', { candidate: event.candidate });
           closeAll();
@@ -54,7 +54,7 @@ export async function GET(req: Request, ctx: Ctx) {
         }
       });
       unsubscribe = sub.unsubscribe;
-      send('snapshot', { partial: sub.snapshot });
+      send('snapshot', { buffer: sub.buffer });
 
       hb = setInterval(() => safeEnqueue(`:hb\n\n`), 15_000);
 

@@ -4,18 +4,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Sidebar, Btn, Avatar, StatusPill, Card, SkillTag, ThemeToggle } from './ui';
 import { I } from './icons';
-import { Skeleton } from './Skeleton';
 import { useCandidateStream } from '@/hooks/useCandidateStream';
 import type { Candidate, CandidateStatus } from '@/lib/db/schema';
-import type { ExtractedResume } from '@/lib/validation';
 
 export default function CandidateDetailClient({ initial }: { initial: Candidate }) {
   const router = useRouter();
   const { streaming, final, error } = useCandidateStream(initial);
   const [c, setC] = useState(initial);
 
-  // hook 的 final 在 done 事件时会更新为 parsed 态的完整 Candidate;
-  // 仅在 c 还是非终态时把它 adopt 过来,避免 PATCH 后的本地新数据被回滚。
   useEffect(() => {
     if (final.extractionStatus === 'parsed' && c.extractionStatus !== 'parsed') {
       setC(final);
@@ -41,14 +37,10 @@ export default function CandidateDetailClient({ initial }: { initial: Candidate 
 
   async function onRetry() {
     const r = await fetch(`/api/candidates/${c.id}/retry`, { method: 'POST' });
-    if (r.ok) {
-      // hook 的 initial 在组件生命周期内锁定,重试后最简单是硬刷新一次
-      // 让页面 SSR 重新拿到 uploaded 态的 Candidate,触发 hook 建新 SSE。
-      window.location.reload();
-    }
+    if (r.ok) window.location.reload();
   }
 
-  // 头部数据优先从 streaming.basic 取,否则从 c(DB) 取
+  // 流式中优先用 streaming.basic;否则用 c(DB)
   const headerBasic = streaming?.basic ?? {
     name: c.name, email: c.email, phone: c.phone, city: c.city, age: c.age,
   };
@@ -63,7 +55,7 @@ export default function CandidateDetailClient({ initial }: { initial: Candidate 
           <Btn size="sm" icon={<I.ChevL />} variant="ghost" onClick={() => router.push('/dashboard')}>返回</Btn>
           <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
           <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
-            候选人 · {isStreaming && !headerBasic.name ? '解析中' : (headerBasic.name ?? c.id)}
+            候选人 · {isStreaming && !headerBasic.name ? '解析中…' : (headerBasic.name ?? c.id)}
           </span>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             <Link href={`/candidates/${c.id}/edit`}><Btn size="sm" icon={<I.Edit />}>编辑</Btn></Link>
@@ -75,20 +67,14 @@ export default function CandidateDetailClient({ initial }: { initial: Candidate 
         <div style={{ padding: '24px 32px', background: 'var(--bg)', borderBottom: '1px solid var(--border)', display: 'flex', gap: 20, alignItems: 'center' }}>
           <Avatar name={headerBasic.name ?? '?'} size={64} />
           <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-              {headerBasic.name ? (
-                <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--fg)', margin: 0 }}>{headerBasic.name}</h1>
-              ) : isStreaming ? (
-                <Skeleton.Line w={120} h={26} />
-              ) : (
-                <h1 style={{ fontSize: 26, fontWeight: 600, color: 'var(--fg)', margin: 0 }}>(未提取)</h1>
-              )}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, minHeight: 32 }}>
+              <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--fg)', margin: 0 }}>
+                {headerBasic.name || (isStreaming ? ' ' : '(未提取)')}
+              </h1>
               {c.extractionStatus === 'parsed' && <StatusPill status={c.status} />}
             </div>
 
-            {headerTargetRole === undefined && isStreaming ? (
-              <div style={{ marginTop: 6 }}><Skeleton.Badge w={120} h={22} /></div>
-            ) : headerTargetRole ? (
+            {headerTargetRole ? (
               <div style={{ marginTop: 6 }}>
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 4,
@@ -99,19 +85,11 @@ export default function CandidateDetailClient({ initial }: { initial: Candidate 
             ) : null}
 
             <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 13, color: 'var(--fg-muted)', flexWrap: 'wrap' }}>
-              {isStreaming && !streaming?.basic ? (
-                <>
-                  <Skeleton.Line w={90} /><Skeleton.Line w={70} /><Skeleton.Line w={120} /><Skeleton.Line w={100} />
-                </>
-              ) : (
-                <>
-                  {headerRole && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Briefcase size={13} />{headerRole}</span>}
-                  {headerBasic.city && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.MapPin size={13} />{headerBasic.city}</span>}
-                  {headerBasic.email && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Mail size={13} />{headerBasic.email}</span>}
-                  {headerBasic.phone && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Phone size={13} />{headerBasic.phone}</span>}
-                  {headerBasic.age != null && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>🎂 {headerBasic.age} 岁</span>}
-                </>
-              )}
+              {headerRole && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Briefcase size={13} />{headerRole}</span>}
+              {headerBasic.city && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.MapPin size={13} />{headerBasic.city}</span>}
+              {headerBasic.email && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Mail size={13} />{headerBasic.email}</span>}
+              {headerBasic.phone && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Phone size={13} />{headerBasic.phone}</span>}
+              {headerBasic.age != null && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>🎂 {headerBasic.age} 岁</span>}
             </div>
           </div>
         </div>
@@ -142,194 +120,129 @@ function StreamingSections({
   isStreaming: boolean;
   onUpdateStatus: (next: CandidateStatus) => void;
 }) {
-  // 数据源:流式中用 streaming,最终用 c.extractedJson
-  const src: Partial<ExtractedResume> = streaming
-    ? {
-        educations: streaming.educations,
-        works:      streaming.works,
-        projects:   streaming.projects,
-        skills:     streaming.skills,
-        summary:    streaming.summary,
-      }
-    : (c.extractedJson ?? { educations: [], works: [], projects: [], skills: [], summary: '' });
+  // 流式中:从 streaming(partial JSON 解析结果) 取数据,允许任何字段为空/部分
+  // 完成后:从 c.extractedJson 取数据,空字段渲染 "—"
+  // 类型用 any:streaming 的字段是 Partial<...>,JSON 截断时可能任何叶子值是 undefined
+  const src: any = streaming
+    ?? (c.extractedJson ?? { educations: [], works: [], projects: [], skills: [], summary: '' });
 
-  const summaryPending = isStreaming && streaming?.summary === undefined;
-  const skillsPending  = isStreaming && streaming?.skills  === undefined;
-  const edus  = src.educations ?? [];
-  const works = src.works      ?? [];
-  const prjs  = src.projects   ?? [];
+  const edus  = (src.educations ?? []).filter((e: any) => e && typeof e === 'object');
+  const works = (src.works      ?? []).filter((w: any) => w && typeof w === 'object');
+  const prjs  = (src.projects   ?? []).filter((p: any) => p && typeof p === 'object');
+  const skills = src.skills ?? [];
+  const summary = typeof src.summary === 'string' ? src.summary : '';
 
-  // schema 顺序:educations → works → projects → skills → summary
-  // 后一个字段出现意味着前面的 section 已封口,可以收掉尾部骨架。
-  const eduDone = !isStreaming
-    || works.length > 0
-    || prjs.length > 0
-    || streaming?.skills !== undefined
-    || streaming?.summary !== undefined;
-  const worksDone = !isStreaming
-    || prjs.length > 0
-    || streaming?.skills !== undefined
-    || streaming?.summary !== undefined;
-  const projectsDone = !isStreaming
-    || streaming?.skills !== undefined
-    || streaming?.summary !== undefined;
-
-  // 流式中:已到的真实项 + 后续骨架(至少占满 min,或在数据多于 min 时永远留 1 条尾骨架)
-  // 完成后:只渲染真实项,空数组返回 0(由调用方渲染 "—")
-  const slotsFor = (count: number, done: boolean, min: number): number =>
-    done ? count : Math.max(count + 1, min);
+  const placeholder = isStreaming ? '' : '—';
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 1200 }}>
       {/* AI 评语 */}
       <Card style={{ padding: 18, gridColumn: 'span 2' }}>
         <div style={{ fontSize: 11, color: 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 500, marginBottom: 10 }}>AI 评语</div>
-        {summaryPending ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <Skeleton.Line w="100%" /><Skeleton.Line w="95%" /><Skeleton.Line w="60%" />
-          </div>
-        ) : (
-          <p style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--fg)', margin: 0 }}>{src.summary || '—'}</p>
-        )}
+        <p style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--fg)', margin: 0, minHeight: 22, whiteSpace: 'pre-wrap' }}>
+          {summary || placeholder}
+        </p>
       </Card>
 
       {/* 工作经历 */}
       <Card style={{ padding: 18 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>工作经历</div>
-        {(() => {
-          const slots = slotsFor(works.length, worksDone, 2);
-          if (slots === 0) return <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>—</div>;
-          return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {Array.from({ length: slots }).map((_, i) => {
-                if (i < works.length) {
-                  const w = works[i];
-                  return (
-                    <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent-300)' }}>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{w.company} · {w.role ?? '—'}</div>
-                      <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
-                        {(w.startDate ?? '—')} — {(w.endDate ?? '—')}
-                      </div>
-                      {w.highlights.length > 0 && (
-                        <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '6px 0 0 14px', padding: 0, lineHeight: 1.6 }}>
-                          {w.highlights.map((h, j) => <li key={j}>{h}</li>)}
-                        </ul>
-                      )}
-                    </div>
-                  );
-                }
-                return (
-                  <div key={`sk-${i}`} style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <Skeleton.Line w="70%" h={13} /><Skeleton.Line w="40%" h={11} /><Skeleton.Line w="85%" h={11} />
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })()}
+        {works.length === 0 ? (
+          <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {works.map((w: any, i: number) => (
+              <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent-300)' }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>
+                  {w.company || ''}{w.role ? ` · ${w.role}` : ''}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
+                  {w.startDate || ''}{w.startDate || w.endDate ? ' — ' : ''}{w.endDate || ''}
+                </div>
+                {Array.isArray(w.highlights) && w.highlights.length > 0 && (
+                  <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '6px 0 0 14px', padding: 0, lineHeight: 1.6 }}>
+                    {w.highlights.map((h: string, j: number) => <li key={j}>{h}</li>)}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       {/* 教育背景 */}
       <Card style={{ padding: 18 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>教育背景</div>
-        {(() => {
-          const slots = slotsFor(edus.length, eduDone, 1);
-          if (slots === 0) return <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>—</div>;
-          return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {Array.from({ length: slots }).map((_, i) => {
-                if (i < edus.length) {
-                  const e = edus[i];
-                  return (
-                    <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--info-300)' }}>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{e.school}</div>
-                      <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}>
-                        {e.major ?? '—'} · {e.degree ?? '—'}
-                      </div>
-                      <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
-                        {(e.startDate ?? '—')} — {(e.endDate ?? '—')}
-                      </div>
-                    </div>
-                  );
-                }
-                return (
-                  <div key={`sk-${i}`} style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <Skeleton.Line w="70%" h={13} /><Skeleton.Line w="50%" h={11} /><Skeleton.Line w="40%" h={11} />
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })()}
+        {edus.length === 0 ? (
+          <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {edus.map((e: any, i: number) => (
+              <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--info-300)' }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{e.school || ''}</div>
+                <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}>
+                  {e.major || ''}{e.major && e.degree ? ' · ' : ''}{e.degree || ''}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
+                  {e.startDate || ''}{e.startDate || e.endDate ? ' — ' : ''}{e.endDate || ''}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       {/* 项目经历 */}
       <Card style={{ padding: 18, gridColumn: 'span 2' }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>项目经历</div>
-        {(() => {
-          const slots = slotsFor(prjs.length, projectsDone, 3);
-          if (slots === 0) return <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>—</div>;
-          return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {Array.from({ length: slots }).map((_, i) => {
-                if (i < prjs.length) {
-                  const p = prjs[i];
-                  return (
-                    <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent)' }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 14, fontWeight: 600 }}>{p.name}</span>
-                        {p.role && <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>· {p.role}</span>}
-                        {(p.startDate || p.endDate) && (
-                          <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
-                            · {(p.startDate ?? '—')} — {(p.endDate ?? '—')}
-                          </span>
-                        )}
-                        {p.url && (
-                          <a href={p.url} target="_blank" rel="noopener noreferrer"
-                             style={{ fontSize: 12, color: 'var(--accent)', marginLeft: 'auto' }}>
-                            🔗 {new URL(p.url).host}
-                          </a>
-                        )}
-                      </div>
-                      {p.techStack.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
-                          {p.techStack.map((t, j) => <SkillTag key={j}>{t}</SkillTag>)}
-                        </div>
-                      )}
-                      {p.description && (
-                        <div style={{ fontSize: 13, color: 'var(--fg)', marginTop: 8, lineHeight: 1.6 }}>{p.description}</div>
-                      )}
-                      {p.highlights.length > 0 && (
-                        <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '8px 0 0 14px', padding: 0, lineHeight: 1.65 }}>
-                          {p.highlights.map((h, j) => <li key={j}>{h}</li>)}
-                        </ul>
-                      )}
-                    </div>
-                  );
-                }
-                return (
-                  <div key={`sk-${i}`} style={{ paddingLeft: 12, borderLeft: '2px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <Skeleton.Line w="40%" h={14} /><Skeleton.Line w="90%" h={12} /><Skeleton.Line w="75%" h={12} />
+        {prjs.length === 0 ? (
+          <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {prjs.map((p: any, i: number) => (
+              <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent)' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{p.name || ''}</span>
+                  {p.role && <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>· {p.role}</span>}
+                  {(p.startDate || p.endDate) && (
+                    <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
+                      · {p.startDate || ''}{p.startDate || p.endDate ? ' — ' : ''}{p.endDate || ''}
+                    </span>
+                  )}
+                  {p.url && typeof p.url === 'string' && p.url.startsWith('http') && (
+                    <a href={p.url} target="_blank" rel="noopener noreferrer"
+                       style={{ fontSize: 12, color: 'var(--accent)', marginLeft: 'auto' }}>
+                      🔗 {(() => { try { return new URL(p.url).host; } catch { return p.url; } })()}
+                    </a>
+                  )}
+                </div>
+                {Array.isArray(p.techStack) && p.techStack.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                    {p.techStack.map((t: string, j: number) => <SkillTag key={j}>{t}</SkillTag>)}
                   </div>
-                );
-              })}
-            </div>
-          );
-        })()}
+                )}
+                {p.description && (
+                  <div style={{ fontSize: 13, color: 'var(--fg)', marginTop: 8, lineHeight: 1.6 }}>{p.description}</div>
+                )}
+                {Array.isArray(p.highlights) && p.highlights.length > 0 && (
+                  <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '8px 0 0 14px', padding: 0, lineHeight: 1.65 }}>
+                    {p.highlights.map((h: string, j: number) => <li key={j}>{h}</li>)}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       {/* 技能 */}
       <Card style={{ padding: 18, gridColumn: 'span 2' }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>技能</div>
-        {skillsPending ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {[60, 80, 70, 90, 55, 75].map((w, i) => (
-              <Skeleton.Badge key={i} w={w} h={22} />
-            ))}
-          </div>
+        {skills.length === 0 ? (
+          <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {(src.skills ?? []).map((s) => <SkillTag key={s}>{s}</SkillTag>)}
+            {skills.map((s: string, i: number) => <SkillTag key={i}>{s}</SkillTag>)}
           </div>
         )}
       </Card>

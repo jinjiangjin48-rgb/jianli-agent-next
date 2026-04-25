@@ -83,7 +83,7 @@ describe('GET /api/candidates/:id/stream', () => {
     expect(body).toContain('"message":"boom"');
   });
 
-  it('streams snapshot + delta + done for an extracting candidate', async () => {
+  it('streams snapshot + chunk + done for an extracting candidate', async () => {
     const sqlite = new Database(process.env.DATABASE_URL!);
     sqlite.pragma('journal_mode = WAL');
     const d = drizzle(sqlite);
@@ -108,9 +108,9 @@ describe('GET /api/candidates/:id/stream', () => {
     await workerPromise;
 
     expect(body).toContain('event: snapshot');
-    expect(body).toContain('event: delta');
+    expect(body).toContain('event: chunk');
     expect(body).toContain('event: done');
-    // basic 这个 path 至少会被推一次
-    expect(body).toMatch(/"path":"basic"/);
+    // chunk frame 携带 text 字段
+    expect(body).toMatch(/"text":/);
   });
 });

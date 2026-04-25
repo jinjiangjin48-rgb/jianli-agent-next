@@ -1,18 +1,17 @@
 // lib/extraction/event-bus.ts
 import { EventEmitter } from 'node:events';
-import type { ExtractedResume } from '../validation';
 import type { Candidate } from '../db/schema';
 
 export type StreamEvent =
-  | { type: 'delta'; path: string; value: unknown }
+  | { type: 'chunk'; text: string }
   | { type: 'done';  candidate: Candidate }
   | { type: 'error'; message: string };
 
 export type Listener = (event: StreamEvent) => void;
 
 type State = {
-  emitters:  Map<string, EventEmitter>;
-  snapshots: Map<string, Partial<ExtractedResume>>;
+  emitters: Map<string, EventEmitter>;
+  buffers:  Map<string, string>;
 };
 
 declare global {
@@ -22,7 +21,7 @@ declare global {
 
 function state(): State {
   if (!globalThis.__streamEventBus) {
-    globalThis.__streamEventBus = { emitters: new Map(), snapshots: new Map() };
+    globalThis.__streamEventBus = { emitters: new Map(), buffers: new Map() };
   }
   return globalThis.__streamEventBus;
 }
@@ -38,46 +37,33 @@ function getEmitter(id: string): EventEmitter {
   return e;
 }
 
-function applyDeltaToSnapshot(snap: any, path: string, value: unknown): void {
-  const m = path.match(/^(\w+)\[(\d+)\]$/);
-  if (m) {
-    const key = m[1];
-    const idx = Number(m[2]);
-    if (!Array.isArray(snap[key])) snap[key] = [];
-    snap[key][idx] = value;
-    return;
-  }
-  snap[path] = value;
-}
-
 export function subscribe(id: string, listener: Listener): {
-  snapshot: Partial<ExtractedResume>;
+  buffer: string;
   unsubscribe: () => void;
 } {
   const e = getEmitter(id);
-  const snapshot = { ...(state().snapshots.get(id) ?? {}) };
+  const buffer = state().buffers.get(id) ?? '';
   e.on('event', listener);
   return {
-    snapshot,
+    buffer,
     unsubscribe: () => { e.off('event', listener); },
   };
 }
 
 export function publish(id: string, event: StreamEvent): void {
-  if (event.type === 'delta') {
-    const snap = state().snapshots.get(id) ?? {};
-    applyDeltaToSnapshot(snap, event.path, event.value);
-    state().snapshots.set(id, snap);
+  if (event.type === 'chunk') {
+    const s = state();
+    s.buffers.set(id, (s.buffers.get(id) ?? '') + event.text);
   }
   getEmitter(id).emit('event', event);
 }
 
-export function getSnapshot(id: string): Partial<ExtractedResume> {
-  return { ...(state().snapshots.get(id) ?? {}) };
+export function getBuffer(id: string): string {
+  return state().buffers.get(id) ?? '';
 }
 
 export function clear(id: string): void {
   const s = state();
   s.emitters.delete(id);
-  s.snapshots.delete(id);
+  s.buffers.delete(id);
 }

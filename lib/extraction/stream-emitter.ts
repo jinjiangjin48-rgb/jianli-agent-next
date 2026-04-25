@@ -1,5 +1,6 @@
 // lib/extraction/stream-emitter.ts
 import { parse as bestEffort } from 'best-effort-json-parser';
+import { ExtractionError } from '../errors';
 
 export type Delta = { path: string; value: unknown };
 
@@ -95,8 +96,14 @@ export function createStreamEmitter(): {
       return collectDeltas(false);
     },
     finalize(): { deltas: Delta[]; raw: unknown } {
+      if (!buffer.trim()) throw new ExtractionError('llm_empty');
       const deltas = collectDeltas(true);
-      const raw = JSON.parse(buffer);
+      let raw: unknown;
+      try {
+        raw = JSON.parse(buffer);
+      } catch {
+        throw new ExtractionError('llm_invalid_json');
+      }
       return { deltas, raw };
     },
     getBuffer(): string { return buffer; },

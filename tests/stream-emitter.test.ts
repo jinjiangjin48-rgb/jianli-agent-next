@@ -87,6 +87,18 @@ describe('stream-emitter', () => {
     );
   });
 
+  it('does NOT emit educations[0] when school anchor is missing, even if works sibling appears', () => {
+    const e = createStreamEmitter();
+    // 第一条 education 只有 major,没有 school
+    const deltas = feedChunks(e, [
+      '{"basic":{"name":null,"email":null,"phone":null,"city":null,"age":null},',
+      '"targetRole":null,',
+      '"educations":[{"major":"CS","degree":null,"startDate":null,"endDate":null}',
+      '],"works":[',  // 下一个兄弟键 works 出现
+    ]);
+    expect(deltas.map((d) => d.path)).not.toContain('educations[0]');
+  });
+
   it('each path is emitted at most once across feed+finalize', () => {
     const e = createStreamEmitter();
     const doc = {

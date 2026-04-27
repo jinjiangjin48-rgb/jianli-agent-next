@@ -11,11 +11,12 @@ export const ExtractedResume = z.object({
   }),
   targetRole: z.string().nullable(),
   educations: z.array(z.object({
-    school:    z.string(),
-    major:     z.string().nullable(),
-    degree:    z.string().nullable(),
-    startDate: z.string().nullable(),
-    endDate:   z.string().nullable(),
+    school:     z.string(),
+    major:      z.string().nullable(),
+    degree:     z.string().nullable(),
+    startDate:  z.string().nullable(),
+    endDate:    z.string().nullable(),
+    schoolTier: z.enum(['985', '211', '一本', '二本', '三本', '大专']).nullable(),
   })),
   works: z.array(z.object({
     company:     z.string(),
@@ -34,6 +35,8 @@ export const ExtractedResume = z.object({
     endDate:     z.string().nullable(),
     description: z.string().nullable(),
     highlights:  z.array(z.string()).default([]),
+    aiSummary:   z.string().nullable().optional(),
+    valueTag:    z.string().nullable().optional(),
   })),
   skills:  z.array(z.string()).default([]),
   summary: z.string(),
@@ -84,6 +87,14 @@ export const UpsertJD = z.object({
   { message: '三个维度权重之和必须为 100', path: ['skillWeight'] },
 );
 export type UpsertJDBody = z.infer<typeof UpsertJD>;
+
+// ---- 项目 AI 评估响应 ----
+export const ProjectEvalItem = z.object({
+  aiSummary: z.string(),
+  valueTag:  z.string().nullable(),
+});
+export const ProjectEvalResponse = z.array(ProjectEvalItem);
+export type ProjectEvalItemType = z.infer<typeof ProjectEvalItem>;
 
 // ---- AI 匹配响应（overall 由服务端按 JD 权重计算，AI 不输出）----
 export const MatchAIResponse = z.object({

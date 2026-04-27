@@ -14,11 +14,12 @@ export const RESUME_SECTION_EMBEDDED: ExtractedResume = {
   targetRole: null,
   educations: [
     {
-      school:    '清华大学',
-      major:     '计算机',
-      degree:    '硕士',
-      startDate: '2018.09',
-      endDate:   '2021.06',
+      school:     '清华大学',
+      major:      '计算机',
+      degree:     '硕士',
+      startDate:  '2018.09',
+      endDate:    '2021.06',
+      schoolTier: '985',
     },
   ],
   works: [

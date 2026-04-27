@@ -11,5 +11,5 @@ export default async function JdPage() {
   const items = db.select().from(jobDescriptions)
     .where(eq(jobDescriptions.userId, user.id))
     .orderBy(desc(jobDescriptions.createdAt)).all();
-  return <JdClient initial={items} user={user} />;
+  return <JdClient initial={items} user={user} initialDefaultJdId={user.defaultJdId ?? null} />;
 }

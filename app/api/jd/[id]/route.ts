@@ -31,16 +31,16 @@ export async function PATCH(req: Request, ctx: Ctx) {
 
   const d = parsed.data;
   const updates = {
-    title:            d.title,
-    description:      d.description,
-    requiredSkills:   d.requiredSkills,
-    bonusSkills:      d.bonusSkills,
-    minYears:         d.minYears ?? null,
-    requiredDegree:   d.requiredDegree,
-    skillWeight:      d.skillWeight,
+    title: d.title,
+    description: d.description,
+    requiredSkills: d.requiredSkills,
+    bonusSkills: d.bonusSkills,
+    minYears: d.minYears ?? null,
+    requiredDegree: d.requiredDegree,
+    skillWeight: d.skillWeight,
     experienceWeight: d.experienceWeight,
-    educationWeight:  d.educationWeight,
-    updatedAt:        new Date(),
+    educationWeight: d.educationWeight,
+    updatedAt: new Date(),
   };
 
   const updated = db.update(jobDescriptions).set(updates).where(eq(jobDescriptions.id, id)).returning().get();

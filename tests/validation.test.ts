@@ -9,7 +9,7 @@ describe('ExtractedResume zod', () => {
       targetRole: '前端开发工程师 / TypeScript 全栈开发',
       educations: [{
         school: '浙江大学', major: '计算机', degree: '本科',
-        startDate: '2015.09', endDate: '2019.07',
+        startDate: '2015.09', endDate: '2019.07', schoolTier: '985',
       }],
       works: [{
         company: '阿里', role: 'FE',
@@ -95,7 +95,7 @@ describe('ExtractedResume zod', () => {
       targetRole: null,
       educations: [{
         school: 's', major: null, degree: null,
-        startDate: '2016/06', endDate: '2019/07',
+        startDate: '2016/06', endDate: '2019/07', schoolTier: null,
       }],
       works: [], projects: [], skills: [], summary: '',
     };

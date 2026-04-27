@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Sidebar, Btn, Avatar, StatusPill, Card, SkillTag, ThemeToggle } from './ui';
+import { Sidebar, Btn, Avatar, StatusPill, Card, SkillTag, SchoolTierBadge, ThemeToggle } from './ui';
 import JdMatchPanel from './JdMatchPanel';
 import { I } from './icons';
 import { useCandidateStream } from '@/hooks/useCandidateStream';
@@ -129,8 +129,6 @@ function StreamingSections({
 
   const placeholder = isStreaming ? '' : '—';
 
-  const allHighlights: string[] = works.flatMap((w: any) => (w.highlights ?? []) as string[]).slice(0, 5);
-
   const SectionLabel = ({ children }: { children: React.ReactNode }) => (
     <div style={{ fontSize: 11, color: 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 500, marginBottom: 10 }}>{children}</div>
   );
@@ -140,11 +138,11 @@ function StreamingSections({
   );
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16, maxWidth: 1200, alignItems: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 18, maxWidth: 1200, alignItems: 'start' }}>
       {/* ── Left column ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* AI 评语 */}
-        <Card style={{ padding: 18 }}>
+        <Card style={{ padding: 20 }}>
           <SectionLabel>AI 评语</SectionLabel>
           <p style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--fg)', margin: 0, minHeight: 22, whiteSpace: 'pre-wrap' }}>
             {summary || placeholder}
@@ -152,12 +150,12 @@ function StreamingSections({
         </Card>
 
         {/* 工作经历 */}
-        <Card style={{ padding: 18 }}>
+        <Card style={{ padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 14 }}>工作经历</div>
           {works.length === 0 ? (
             <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               {works.map((w: any, i: number) => (
                 <div key={i} style={{ display: 'flex', gap: 12 }}>
                   <BulletDot color="var(--accent-400)" />
@@ -168,6 +166,11 @@ function StreamingSections({
                     <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
                       {w.startDate || ''}{(w.startDate || w.endDate) ? ' — ' : ''}{w.endDate || ''}
                     </div>
+                    {w.description && (
+                      <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 5, lineHeight: 1.6, fontStyle: 'italic' }}>
+                        {w.description}
+                      </div>
+                    )}
                     {Array.isArray(w.highlights) && w.highlights.length > 0 && (
                       <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '6px 0 0 0', padding: 0, listStyle: 'none', lineHeight: 1.6 }}>
                         {w.highlights.map((h: string, j: number) => (
@@ -186,7 +189,7 @@ function StreamingSections({
         </Card>
 
         {/* 教育背景 */}
-        <Card style={{ padding: 18 }}>
+        <Card style={{ padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 14 }}>教育背景</div>
           {edus.length === 0 ? (
             <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
@@ -196,8 +199,11 @@ function StreamingSections({
                 <div key={i} style={{ display: 'flex', gap: 12 }}>
                   <BulletDot color="var(--info-400)" />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{e.school || ''}</div>
-                    <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600 }}>{e.school || ''}</span>
+                      <SchoolTierBadge tier={e.schoolTier} />
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 3 }}>
                       {e.major || ''}{e.major && e.degree ? ' · ' : ''}{e.degree || ''}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
@@ -211,7 +217,7 @@ function StreamingSections({
         </Card>
 
         {/* 项目经历 */}
-        <Card style={{ padding: 18 }}>
+        <Card style={{ padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 14 }}>项目经历</div>
           {prjs.length === 0 ? (
             <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
@@ -221,6 +227,17 @@ function StreamingSections({
                 <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent)' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 14, fontWeight: 600 }}>{p.name || ''}</span>
+                    {p.valueTag && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                        background: p.valueTag === '亮点项目' ? 'var(--accent-bg-subtle)' : 'var(--bg-sunken)',
+                        color: p.valueTag === '亮点项目' ? 'var(--accent-700)' : 'var(--fg-subtle)',
+                        border: '1px solid ' + (p.valueTag === '亮点项目' ? 'var(--accent-300)' : 'var(--border)'),
+                        whiteSpace: 'nowrap', alignSelf: 'center',
+                      }}>
+                        {p.valueTag}
+                      </span>
+                    )}
                     {p.role && <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>· {p.role}</span>}
                     {(p.startDate || p.endDate) && (
                       <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
@@ -253,6 +270,15 @@ function StreamingSections({
                       ))}
                     </ul>
                   )}
+                  {p.aiSummary && (
+                    <div style={{
+                      fontSize: 12, color: 'var(--fg-muted)', borderTop: '1px solid var(--border)',
+                      paddingTop: 8, marginTop: 8, display: 'flex', gap: 6, alignItems: 'flex-start',
+                    }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', flexShrink: 0, marginTop: 1, letterSpacing: '0.02em' }}>AI</span>
+                      <span style={{ lineHeight: 1.55 }}>{p.aiSummary}</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -261,7 +287,7 @@ function StreamingSections({
       </div>
 
       {/* ── Right panel ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* JD 匹配面板 */}
         <JdMatchPanel
           candidateId={c.id}
@@ -270,35 +296,20 @@ function StreamingSections({
         />
 
         {/* 技能 */}
-        <Card style={{ padding: 18 }}>
+        <Card style={{ padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>技能</div>
           {skills.length === 0 ? (
             <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
           ) : (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {skills.map((s: string, i: number) => <SkillTag key={i}>{s}</SkillTag>)}
+              {skills.map((s: string, i: number) => <SkillTag key={i} variant="default">{s}</SkillTag>)}
             </div>
           )}
         </Card>
 
-        {/* 工作亮点 */}
-        {allHighlights.length > 0 && (
-          <Card style={{ padding: 18 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>工作亮点</div>
-            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {allHighlights.map((h, i) => (
-                <li key={i} style={{ display: 'flex', gap: 8, fontSize: 12, color: 'var(--fg-muted)', lineHeight: 1.55 }}>
-                  <span style={{ color: 'var(--accent-400)', flexShrink: 0, marginTop: 2 }}>·</span>
-                  <span>{h}</span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )}
-
         {/* 状态流转 */}
         {!isStreaming && (
-          <Card style={{ padding: 18 }}>
+          <Card style={{ padding: 20 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>状态流转</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {(['待筛选', '初筛通过', '面试中', '已录用', '已淘汰'] as const).map((s) => (

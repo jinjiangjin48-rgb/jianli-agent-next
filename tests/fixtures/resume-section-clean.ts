@@ -13,11 +13,12 @@ export const RESUME_SECTION_CLEAN: ExtractedResume = {
   targetRole: '前端开发工程师 / TypeScript 全栈开发',
   educations: [
     {
-      school:    '重庆航天',
-      major:     '软件工程',
-      degree:    null,
-      startDate: '2016/06',
-      endDate:   '2019/07',
+      school:     '重庆航天',
+      major:      '软件工程',
+      degree:     null,
+      startDate:  '2016/06',
+      endDate:    '2019/07',
+      schoolTier: null,
     },
   ],
   works: [

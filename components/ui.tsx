@@ -88,16 +88,46 @@ export const Badge = ({ tone = 'neutral', dot, children }: BadgeProps) => {
 };
 
 // ---------- SkillTag ----------
-type SkillTagProps = { strong?: boolean; children?: React.ReactNode };
-export const SkillTag = ({ strong, children }: SkillTagProps) => (
-  <span style={{
-    display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 999,
-    fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
-    background: strong ? 'var(--accent-bg-subtle)' : 'transparent',
-    color: strong ? 'var(--accent-700)' : 'var(--fg)',
-    border: '1px solid ' + (strong ? 'var(--accent-300)' : 'var(--border)'),
-  }}>{children}</span>
-);
+type SkillTagProps = { variant?: 'default' | 'strong' | 'muted'; strong?: boolean; children?: React.ReactNode };
+export const SkillTag = ({ variant, strong, children }: SkillTagProps) => {
+  const v = variant ?? (strong ? 'strong' : 'default');
+  const styles = {
+    default: { bg: 'var(--bg-sunken)',       fg: 'var(--fg-muted)',   border: 'var(--border)' },
+    strong:  { bg: 'var(--accent-bg-subtle)', fg: 'var(--accent-700)', border: 'var(--accent-300)' },
+    muted:   { bg: 'transparent',            fg: 'var(--fg-subtle)',  border: 'var(--border)' },
+  }[v];
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 999,
+      fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
+      background: styles.bg, color: styles.fg,
+      border: '1px solid ' + styles.border,
+    }}>{children}</span>
+  );
+};
+
+// ---------- SchoolTierBadge ----------
+type SchoolTier = '985' | '211' | '一本' | '二本' | '三本' | '大专';
+type SchoolTierBadgeProps = { tier?: SchoolTier | null };
+export const SchoolTierBadge = ({ tier }: SchoolTierBadgeProps) => {
+  if (!tier) return null;
+  const styles: Record<SchoolTier, { bg: string; fg: string; border: string }> = {
+    '985': { bg: 'var(--warn-100)',         fg: 'var(--warn-700)',   border: 'var(--warn-300)'   },
+    '211': { bg: 'var(--info-100)',         fg: 'var(--info-700)',   border: 'var(--info-300)'   },
+    '一本': { bg: 'var(--accent-bg-subtle)', fg: 'var(--accent-700)', border: 'var(--accent-300)' },
+    '二本': { bg: 'var(--bg-sunken)',        fg: 'var(--fg-muted)',   border: 'var(--border)'     },
+    '三本': { bg: 'var(--bg-sunken)',        fg: 'var(--fg-subtle)',  border: 'var(--border)'     },
+    '大专': { bg: 'var(--bg-sunken)',        fg: 'var(--fg-subtle)',  border: 'var(--border)'     },
+  };
+  const s = styles[tier];
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', padding: '1px 7px', borderRadius: 4,
+      fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
+      background: s.bg, color: s.fg, border: '1px solid ' + s.border,
+    }}>{tier}</span>
+  );
+};
 
 // ---------- Status pill ----------
 export const STATUSES = {

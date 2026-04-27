@@ -63,12 +63,14 @@ function parseSkills(text: string): string[] {
   return text.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
 }
 
-export default function JdClient({ initial, user }: { initial: JobDescription[]; user: User }) {
+export default function JdClient({ initial, user, initialDefaultJdId }: { initial: JobDescription[]; user: User; initialDefaultJdId: string | null }) {
   const [view, setView] = useState<View>('list');
   const [editing, setEditing] = useState<JobDescription | null>(null);
   const [items, setItems] = useState<JobDescription[]>(initial);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
+  const [defaultJdId, setDefaultJdId] = useState<string | null>(initialDefaultJdId);
+  const [settingDefault, setSettingDefault] = useState<string | null>(null);
 
   function startCreate() {
     setEditing(null);
@@ -130,7 +132,25 @@ export default function JdClient({ initial, user }: { initial: JobDescription[];
   async function remove(jd: JobDescription) {
     if (!confirm(`确认删除岗位「${jd.title}」？`)) return;
     const r = await fetch(`/api/jd/${jd.id}`, { method: 'DELETE' });
-    if (r.ok) setItems(prev => prev.filter(i => i.id !== jd.id));
+    if (r.ok) {
+      setItems(prev => prev.filter(i => i.id !== jd.id));
+      if (defaultJdId === jd.id) setDefaultJdId(null);
+    }
+  }
+
+  async function toggleDefault(jd: JobDescription) {
+    const next = defaultJdId === jd.id ? null : jd.id;
+    setSettingDefault(jd.id);
+    try {
+      const r = await fetch('/api/users/me', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ defaultJdId: next }),
+      });
+      if (r.ok) setDefaultJdId(next);
+    } finally {
+      setSettingDefault(null);
+    }
   }
 
   const requiredSkillsPreview = parseSkills(form.requiredSkillsText);
@@ -198,6 +218,22 @@ export default function JdClient({ initial, user }: { initial: JobDescription[];
                         <span style={{ color: 'var(--fg-subtle)' }}>技{jd.skillWeight ?? 50}·验{jd.experienceWeight ?? 35}·学{jd.educationWeight ?? 15}</span>
                         <span style={{ marginLeft: 'auto' }}>{new Date(jd.createdAt).toLocaleDateString('zh-CN')}</span>
                       </div>
+
+                      <button
+                        type="button"
+                        disabled={settingDefault === jd.id}
+                        onClick={() => toggleDefault(jd)}
+                        style={{
+                          width: '100%', padding: '6px 0', borderRadius: 7, cursor: 'pointer',
+                          border: '1px solid ' + (defaultJdId === jd.id ? 'var(--accent-300)' : 'var(--border)'),
+                          background: defaultJdId === jd.id ? 'var(--accent-bg-subtle)' : 'transparent',
+                          color: defaultJdId === jd.id ? 'var(--accent-700)' : 'var(--fg-subtle)',
+                          fontSize: 12, fontFamily: 'var(--font-sans)', fontWeight: defaultJdId === jd.id ? 600 : 400,
+                          transition: 'all var(--dur-fast)',
+                        }}
+                      >
+                        {defaultJdId === jd.id ? '✓ 已设为默认（上传自动匹配）' : '设为默认 JD'}
+                      </button>
                     </Card>
                   ))}
                 </div>

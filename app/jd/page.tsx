@@ -1,4 +1,15 @@
-import Placeholder from '@/components/Placeholder';
-export default function Page() {
-  return <Placeholder title="岗位 JD · 评分配置" sidebarActive="jd" description="基于 JD 的 AI 评分功能将在下个里程碑开放,届时可配置必备/加分技能、经验、学历等维度,自动为每位候选人打分并给出评语。" />;
+import { desc, eq } from 'drizzle-orm';
+import { db } from '@/lib/db/client';
+import { jobDescriptions } from '@/lib/db/schema';
+import { requireUser } from '@/lib/auth/session';
+import JdClient from '@/components/JdClient';
+
+export const dynamic = 'force-dynamic';
+
+export default async function JdPage() {
+  const user = await requireUser();
+  const items = db.select().from(jobDescriptions)
+    .where(eq(jobDescriptions.userId, user.id))
+    .orderBy(desc(jobDescriptions.createdAt)).all();
+  return <JdClient initial={items} user={user} />;
 }

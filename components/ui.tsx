@@ -177,16 +177,17 @@ export const ScoreRing = ({ score = 0, size = 72, label }: ScoreRingProps) => {
   const r = size / 2 - 6;
   const c = 2 * Math.PI * r;
   const offset = c * (1 - score / 100);
+  const scoreColor = score >= 80 ? 'var(--score-100)' : score >= 65 ? 'var(--score-80)' : score >= 50 ? 'var(--score-60)' : score >= 30 ? 'var(--score-40)' : 'var(--score-0)';
   return (
     <div style={{ position: 'relative', width: size, height: size }}>
       <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--bg-sunken)" strokeWidth="5" />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--accent)" strokeWidth="5"
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={scoreColor} strokeWidth="5"
           strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset}
           style={{ transition: 'stroke-dashoffset var(--dur-slow) var(--ease-sift)' }} />
       </svg>
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: size * 0.28, fontWeight: 600, color: 'var(--fg)', fontFeatureSettings: "'tnum'" }}>{Math.round(score)}</span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: size * 0.28, fontWeight: 600, color: scoreColor, fontFeatureSettings: "'tnum'" }}>{Math.round(score)}</span>
         {label && <span style={{ fontSize: 9, color: 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>}
       </div>
     </div>
@@ -230,30 +231,47 @@ const SIDEBAR_ITEMS = [
   { id: 'dashboard', label: '候选人',   icon: <I.Users />,     to: '/dashboard' },
   { id: 'jd',        label: '岗位 JD',  icon: <I.Briefcase />, to: '/jd' },
   { id: 'compare',   label: '对比分析', icon: <I.Compare />,   to: '/compare' },
-  { id: 'settings',  label: '设置',     icon: <I.Settings />,  to: '#' },
 ];
 
-type SidebarProps = { active?: string };
-export const Sidebar = ({ active = 'dashboard' }: SidebarProps) => {
+type SidebarProps = {
+  active?: string;
+  counts?: Partial<Record<string, number>>;
+  user?: { displayName?: string | null; username: string } | null;
+};
+export const Sidebar = ({ active = 'dashboard', counts, user }: SidebarProps) => {
   const pathname = usePathname();
   return (
     <aside style={{
       width: 220, background: 'var(--bg)',
       borderRight: '1px solid var(--border)',
       padding: '16px 12px',
-      display: 'flex', flexDirection: 'column', gap: 16,
+      display: 'flex', flexDirection: 'column', gap: 12,
       flexShrink: 0, height: '100%',
     }}>
       <div style={{ padding: '4px 8px' }}>
         <Link href="/" style={{ textDecoration: 'none' }}><SiftLogo /></Link>
       </div>
+      <div style={{ padding: '0 4px' }}>
+        <Link href="/upload" style={{ textDecoration: 'none', display: 'block' }}>
+          <Btn variant="primary" size="sm" icon={<I.Plus />} style={{ width: '100%', justifyContent: 'center' }}>新建任务</Btn>
+        </Link>
+      </div>
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {SIDEBAR_ITEMS.map((item) => {
           const isActive = item.id === active || pathname === item.to;
+          const count = counts?.[item.id];
           const content = (
             <>
               {React.cloneElement(item.icon, { size: 16 })}
-              <span>{item.label}</span>
+              <span style={{ flex: 1 }}>{item.label}</span>
+              {count != null && (
+                <span style={{
+                  fontFamily: 'var(--font-mono)', fontSize: 11,
+                  color: isActive ? 'var(--accent-600)' : 'var(--fg-subtle)',
+                  background: isActive ? 'transparent' : 'var(--bg-sunken)',
+                  padding: '1px 6px', borderRadius: 999,
+                }}>{count}</span>
+              )}
             </>
           );
           const css: React.CSSProperties = {
@@ -263,12 +281,10 @@ export const Sidebar = ({ active = 'dashboard' }: SidebarProps) => {
             color: isActive ? 'var(--accent-700)' : 'var(--fg)',
             fontFamily: 'var(--font-sans)', fontSize: 13,
             fontWeight: isActive ? 600 : 500,
-            cursor: 'pointer', textAlign: 'left', textDecoration: 'none',
+            cursor: 'pointer', textAlign: 'left', textDecoration: 'none', width: '100%',
           };
-          return item.to && item.to !== '#' ? (
+          return (
             <Link key={item.id} href={item.to} style={css}>{content}</Link>
-          ) : (
-            <button key={item.id} style={css} type="button">{content}</button>
           );
         })}
       </nav>
@@ -277,30 +293,42 @@ export const Sidebar = ({ active = 'dashboard' }: SidebarProps) => {
         display: 'flex', alignItems: 'center', gap: 8,
         borderTop: '1px solid var(--border)', paddingTop: 12,
       }}>
-        <Avatar name="陈" size={28} />
-        <div style={{ fontSize: 12, flex: 1 }}>
-          <div style={{ color: 'var(--fg)', fontWeight: 500 }}>陈筱雅</div>
-          <div style={{ color: 'var(--fg-subtle)', fontSize: 11 }}>HR · 腾讯</div>
+        <Avatar name={(user?.displayName ?? user?.username ?? '?')[0].toUpperCase()} size={28} />
+        <div style={{ fontSize: 12, flex: 1, minWidth: 0 }}>
+          <div style={{ color: 'var(--fg)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {user?.displayName ?? user?.username ?? '用户'}
+          </div>
         </div>
+        <form action="/api/auth/logout" method="POST" style={{ flexShrink: 0 }}>
+          <button type="submit" title="退出登录" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', color: 'var(--fg-subtle)', cursor: 'pointer' }}>
+            <I.LogOut size={14} />
+          </button>
+        </form>
       </div>
     </aside>
   );
 };
 
-type TopBarProps = { title: React.ReactNode; right?: React.ReactNode };
-export const TopBar = ({ title, right }: TopBarProps) => (
+type TopBarProps = { title: React.ReactNode; subtitle?: React.ReactNode; right?: React.ReactNode };
+export const TopBar = ({ title, subtitle, right }: TopBarProps) => (
   <div style={{
-    height: 56, borderBottom: '1px solid var(--border)',
+    height: 60, borderBottom: '1px solid var(--border)',
     display: 'flex', alignItems: 'center',
     padding: '0 24px', gap: 16,
     background: 'var(--bg)', flexShrink: 0,
   }}>
-    <div style={{
-      fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600,
-      letterSpacing: '-0.01em', color: 'var(--fg)',
-    }}>{title}</div>
+    <div>
+      <div style={{
+        fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600,
+        letterSpacing: '-0.01em', color: 'var(--fg)',
+      }}>{title}</div>
+      {subtitle && <div style={{ fontSize: 11, color: 'var(--fg-subtle)', marginTop: 1 }}>{subtitle}</div>}
+    </div>
     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
       {right}
+      <button type="button" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--fg-subtle)', cursor: 'pointer' }} aria-label="通知">
+        <I.Bell size={16} />
+      </button>
       <ThemeToggle />
     </div>
   </div>

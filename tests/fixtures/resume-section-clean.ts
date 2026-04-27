@@ -21,9 +21,9 @@ export const RESUME_SECTION_CLEAN: ExtractedResume = {
     },
   ],
   works: [
-    { company: '开林企业管理', role: '前端开发工程师', startDate: '2023/03', endDate: '2026/02', highlights: [] },
-    { company: '誉存科技',     role: '前端开发工程师', startDate: '2021/01', endDate: '2022/12', highlights: [] },
-    { company: '微创软件',     role: '前端开发工程师', startDate: '2019/10', endDate: '2020/11', highlights: [] },
+    { company: '开林企业管理', role: '前端开发工程师', startDate: '2023/03', endDate: '2026/02', description: null, highlights: [] },
+    { company: '誉存科技',     role: '前端开发工程师', startDate: '2021/01', endDate: '2022/12', description: null, highlights: [] },
+    { company: '微创软件',     role: '前端开发工程师', startDate: '2019/10', endDate: '2020/11', description: null, highlights: [] },
   ],
   projects: [
     {

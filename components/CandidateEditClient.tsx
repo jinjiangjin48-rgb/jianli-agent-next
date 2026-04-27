@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar, Btn, Input, Card, Avatar } from './ui';
 import { I } from './icons';
-import type { Candidate } from '@/lib/db/schema';
+import type { Candidate, User } from '@/lib/db/schema';
 
-export default function CandidateEditClient({ initial }: { initial: Candidate }) {
+export default function CandidateEditClient({ initial, user }: { initial: Candidate; user: User }) {
   const router = useRouter();
   const [form, setForm] = useState({
     name:       initial.name ?? '',
@@ -62,7 +62,7 @@ export default function CandidateEditClient({ initial }: { initial: Candidate })
 
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 44px)', background: 'var(--bg-sunken)' }}>
-      <Sidebar active="dashboard" />
+      <Sidebar active="dashboard" user={user} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <div style={{ height: 56, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 12, background: 'var(--bg)' }}>
           <Btn size="sm" icon={<I.ChevL />} variant="ghost" onClick={() => router.push(`/candidates/${initial.id}`)}>返回详情</Btn>

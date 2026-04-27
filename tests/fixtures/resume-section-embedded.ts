@@ -23,10 +23,11 @@ export const RESUME_SECTION_EMBEDDED: ExtractedResume = {
   ],
   works: [
     {
-      company:   '美团',
-      role:      '高级前端工程师',
-      startDate: '2021.07',
-      endDate:   '至今',
+      company:     '美团',
+      role:        '高级前端工程师',
+      startDate:   '2021.07',
+      endDate:     '至今',
+      description: '负责外卖 C 端首页改版与 Mini 框架重构，主导前端监控体系建设。',
       highlights: [
         '负责外卖 C 端首页改版:React + TypeScript,首屏 LCP 从 3.2s 降到 1.4s',
         '主导 Mini 框架重构:去掉老 Redux,改用 Zustand + Immer',

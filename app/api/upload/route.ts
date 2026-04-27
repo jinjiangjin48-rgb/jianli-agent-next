@@ -5,11 +5,15 @@ import { db } from '@/lib/db/client';
 import { candidates } from '@/lib/db/schema';
 import { writePdf, pdfPathFor } from '@/lib/storage';
 import { enqueueExtraction } from '@/lib/extraction/queue';
+import { getUserFromRequest } from '@/lib/auth/session';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const PDF_MAGIC = Buffer.from('%PDF-', 'utf8');
 
 export async function POST(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
   let form: FormData;
   try { form = await req.formData(); }
   catch { return NextResponse.json({ error: 'invalid_form' }, { status: 400 }); }
@@ -41,6 +45,7 @@ export async function POST(req: Request) {
     pdfSize: bytes.length,
     status: '待筛选',
     extractionStatus: 'uploaded',
+    userId: user.id,
     createdAt: now, updatedAt: now,
   }).run();
 

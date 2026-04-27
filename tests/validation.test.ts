@@ -14,6 +14,7 @@ describe('ExtractedResume zod', () => {
       works: [{
         company: '阿里', role: 'FE',
         startDate: '2021.07', endDate: '至今',
+        description: '负责中台前端架构升级。',
         highlights: ['架构升级'],
       }],
       projects: [{
@@ -73,7 +74,7 @@ describe('ExtractedResume zod', () => {
       basic: { name: null, email: null, phone: null, city: null, age: null },
       targetRole: null,
       educations: [],
-      works: [{ company: 'x', role: null, startDate: null, endDate: null }],
+      works: [{ company: 'x', role: null, startDate: null, endDate: null, description: null }],
       projects: [{
         name: 'p', url: null, role: null,
         startDate: null, endDate: null,

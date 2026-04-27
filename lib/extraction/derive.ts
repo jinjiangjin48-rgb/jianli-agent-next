@@ -1,5 +1,6 @@
 // lib/extraction/derive.ts
 import type { ExtractedResume } from '../validation';
+import { CANDIDATE_DEGREE_LEVELS } from '../validation';
 
 type WorkItem = ExtractedResume['works'][number];
 type EduItem  = ExtractedResume['educations'][number];
@@ -20,6 +21,31 @@ export interface FlatFields {
   gradDate:   string | null;
   skills:     string[];
   summary:    string;
+}
+
+export function normalizeDegree(degree: string | null, school: string | null): string | null {
+  const d = degree?.trim() ?? '';
+  const s = school?.trim() ?? '';
+
+  // 直接匹配学历关键词（AI 提取结果或原文写法）
+  if (/博士|phd|doctor/i.test(d))                          return '博士';
+  if (/硕士|研究生|master|mba|mpa|mfa|mphil/i.test(d))     return '硕士';
+  if (/本科|学士|bachelor|undergraduate/i.test(d))          return '本科';
+  if (/大专|专科|associate/i.test(d))                       return '大专';
+  if (/高中|high.?school/i.test(d))                         return '高中';
+  if (/初中|junior.?middle|middle.?school/i.test(d))        return '初中';
+
+  // AI 已返回合法值，直接使用
+  if (CANDIDATE_DEGREE_LEVELS.includes(d as any)) return d;
+
+  // 根据学校名称推断（兜底）
+  if (!s) return null;
+  if (/职业技术学院|职业学院|职业学校|技工学校|高职|专科学校/.test(s)) return '大专';
+  if (/大学|学院/.test(s) && !/职业|技术学院|高职/.test(s))            return '本科';
+  if (/高级中学|高中/.test(s))                                           return '高中';
+  if (/初级中学|初中/.test(s))                                           return '初中';
+
+  return null;
 }
 
 function parseDate(s: string | null): Date | null {
@@ -87,7 +113,7 @@ export function deriveFlat(data: ExtractedResume, now = new Date()): FlatFields 
     years:      computeYears(data.works, now),
     school:     edu?.school ?? null,
     major:      edu?.major ?? null,
-    degree:     edu?.degree ?? null,
+    degree:     normalizeDegree(edu?.degree ?? null, edu?.school ?? null),
     gradDate:   edu?.endDate ?? null,
     skills:     data.skills,
     summary:    data.summary,

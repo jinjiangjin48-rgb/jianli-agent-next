@@ -3,11 +3,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Sidebar, Btn, Avatar, StatusPill, Card, SkillTag, ThemeToggle } from './ui';
+import JdMatchPanel from './JdMatchPanel';
 import { I } from './icons';
 import { useCandidateStream } from '@/hooks/useCandidateStream';
-import type { Candidate, CandidateStatus } from '@/lib/db/schema';
+import type { Candidate, CandidateStatus, User } from '@/lib/db/schema';
 
-export default function CandidateDetailClient({ initial }: { initial: Candidate }) {
+export default function CandidateDetailClient({ initial, user }: { initial: Candidate; user: User }) {
   const router = useRouter();
   const { streaming, final, error } = useCandidateStream(initial);
   const [c, setC] = useState(initial);
@@ -40,7 +41,6 @@ export default function CandidateDetailClient({ initial }: { initial: Candidate 
     if (r.ok) window.location.reload();
   }
 
-  // 流式中优先用 streaming.basic;否则用 c(DB)
   const headerBasic = streaming?.basic ?? {
     name: c.name, email: c.email, phone: c.phone, city: c.city, age: c.age,
   };
@@ -49,9 +49,10 @@ export default function CandidateDetailClient({ initial }: { initial: Candidate 
 
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 44px)', background: 'var(--bg-sunken)' }}>
-      <Sidebar active="dashboard" />
+      <Sidebar active="dashboard" user={user} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <div style={{ height: 56, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 12, background: 'var(--bg)' }}>
+        {/* Top bar */}
+        <div style={{ height: 60, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 12, background: 'var(--bg)', flexShrink: 0 }}>
           <Btn size="sm" icon={<I.ChevL />} variant="ghost" onClick={() => router.push('/dashboard')}>返回</Btn>
           <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
           <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
@@ -64,37 +65,34 @@ export default function CandidateDetailClient({ initial }: { initial: Candidate 
           </div>
         </div>
 
-        <div style={{ padding: '24px 32px', background: 'var(--bg)', borderBottom: '1px solid var(--border)', display: 'flex', gap: 20, alignItems: 'center' }}>
-          <Avatar name={headerBasic.name ?? '?'} size={64} />
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, minHeight: 32 }}>
-              <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--fg)', margin: 0 }}>
-                {headerBasic.name || (isStreaming ? ' ' : '(未提取)')}
+        {/* Candidate header */}
+        <div style={{ padding: '20px 28px', background: 'var(--bg)', borderBottom: '1px solid var(--border)', display: 'flex', gap: 16, alignItems: 'center' }}>
+          <Avatar name={headerBasic.name ?? '?'} size={56} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, minHeight: 28 }}>
+              <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--fg)', margin: 0 }}>
+                {headerBasic.name || (isStreaming ? ' ' : '(未提取)')}
               </h1>
               {c.extractionStatus === 'parsed' && <StatusPill status={c.status} />}
             </div>
-
-            {headerTargetRole ? (
-              <div style={{ marginTop: 6 }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 4,
-                  fontSize: 12, fontWeight: 500,
-                  background: 'var(--accent-bg-subtle)', color: 'var(--accent-700)',
-                }}>🎯 {headerTargetRole}</span>
+            {headerTargetRole && (
+              <div style={{ marginTop: 4 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 10px', borderRadius: 4, fontSize: 12, fontWeight: 500, background: 'var(--accent-bg-subtle)', color: 'var(--accent-700)' }}>
+                  <I.Target size={12} /> {headerTargetRole}
+                </span>
               </div>
-            ) : null}
-
-            <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 13, color: 'var(--fg-muted)', flexWrap: 'wrap' }}>
+            )}
+            <div style={{ display: 'flex', gap: 14, marginTop: 5, fontSize: 13, color: 'var(--fg-muted)', flexWrap: 'wrap' }}>
               {headerRole && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Briefcase size={13} />{headerRole}</span>}
               {headerBasic.city && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.MapPin size={13} />{headerBasic.city}</span>}
               {headerBasic.email && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Mail size={13} />{headerBasic.email}</span>}
               {headerBasic.phone && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Phone size={13} />{headerBasic.phone}</span>}
-              {headerBasic.age != null && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>🎂 {headerBasic.age} 岁</span>}
+              {headerBasic.age != null && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.User size={13} />{headerBasic.age} 岁</span>}
             </div>
           </div>
         </div>
 
-        <div style={{ flex: 1, padding: 24, overflow: 'auto' }}>
+        <div style={{ flex: 1, padding: '20px 28px', overflow: 'auto' }}>
           {error ? (
             <Card style={{ padding: 32 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--danger-700)', marginBottom: 10 }}>解析失败</div>
@@ -120,9 +118,6 @@ function StreamingSections({
   isStreaming: boolean;
   onUpdateStatus: (next: CandidateStatus) => void;
 }) {
-  // 流式中:从 streaming(partial JSON 解析结果) 取数据,允许任何字段为空/部分
-  // 完成后:从 c.extractedJson 取数据,空字段渲染 "—"
-  // 类型用 any:streaming 的字段是 Partial<...>,JSON 截断时可能任何叶子值是 undefined
   const src: any = streaming
     ?? (c.extractedJson ?? { educations: [], works: [], projects: [], skills: [], summary: '' });
 
@@ -134,130 +129,185 @@ function StreamingSections({
 
   const placeholder = isStreaming ? '' : '—';
 
+  const allHighlights: string[] = works.flatMap((w: any) => (w.highlights ?? []) as string[]).slice(0, 5);
+
+  const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+    <div style={{ fontSize: 11, color: 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 500, marginBottom: 10 }}>{children}</div>
+  );
+
+  const BulletDot = ({ color = 'var(--accent-300)' }: { color?: string }) => (
+    <div style={{ width: 8, height: 8, borderRadius: 999, background: color, flexShrink: 0, marginTop: 4 }} />
+  );
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 1200 }}>
-      {/* AI 评语 */}
-      <Card style={{ padding: 18, gridColumn: 'span 2' }}>
-        <div style={{ fontSize: 11, color: 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 500, marginBottom: 10 }}>AI 评语</div>
-        <p style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--fg)', margin: 0, minHeight: 22, whiteSpace: 'pre-wrap' }}>
-          {summary || placeholder}
-        </p>
-      </Card>
-
-      {/* 工作经历 */}
-      <Card style={{ padding: 18 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>工作经历</div>
-        {works.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {works.map((w: any, i: number) => (
-              <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent-300)' }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>
-                  {w.company || ''}{w.role ? ` · ${w.role}` : ''}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
-                  {w.startDate || ''}{w.startDate || w.endDate ? ' — ' : ''}{w.endDate || ''}
-                </div>
-                {Array.isArray(w.highlights) && w.highlights.length > 0 && (
-                  <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '6px 0 0 14px', padding: 0, lineHeight: 1.6 }}>
-                    {w.highlights.map((h: string, j: number) => <li key={j}>{h}</li>)}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {/* 教育背景 */}
-      <Card style={{ padding: 18 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>教育背景</div>
-        {edus.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {edus.map((e: any, i: number) => (
-              <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--info-300)' }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{e.school || ''}</div>
-                <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}>
-                  {e.major || ''}{e.major && e.degree ? ' · ' : ''}{e.degree || ''}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
-                  {e.startDate || ''}{e.startDate || e.endDate ? ' — ' : ''}{e.endDate || ''}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {/* 项目经历 */}
-      <Card style={{ padding: 18, gridColumn: 'span 2' }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>项目经历</div>
-        {prjs.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {prjs.map((p: any, i: number) => (
-              <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent)' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>{p.name || ''}</span>
-                  {p.role && <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>· {p.role}</span>}
-                  {(p.startDate || p.endDate) && (
-                    <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
-                      · {p.startDate || ''}{p.startDate || p.endDate ? ' — ' : ''}{p.endDate || ''}
-                    </span>
-                  )}
-                  {p.url && typeof p.url === 'string' && p.url.startsWith('http') && (
-                    <a href={p.url} target="_blank" rel="noopener noreferrer"
-                       style={{ fontSize: 12, color: 'var(--accent)', marginLeft: 'auto' }}>
-                      🔗 {(() => { try { return new URL(p.url).host; } catch { return p.url; } })()}
-                    </a>
-                  )}
-                </div>
-                {Array.isArray(p.techStack) && p.techStack.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
-                    {p.techStack.map((t: string, j: number) => <SkillTag key={j}>{t}</SkillTag>)}
-                  </div>
-                )}
-                {p.description && (
-                  <div style={{ fontSize: 13, color: 'var(--fg)', marginTop: 8, lineHeight: 1.6 }}>{p.description}</div>
-                )}
-                {Array.isArray(p.highlights) && p.highlights.length > 0 && (
-                  <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '8px 0 0 14px', padding: 0, lineHeight: 1.65 }}>
-                    {p.highlights.map((h: string, j: number) => <li key={j}>{h}</li>)}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {/* 技能 */}
-      <Card style={{ padding: 18, gridColumn: 'span 2' }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>技能</div>
-        {skills.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {skills.map((s: string, i: number) => <SkillTag key={i}>{s}</SkillTag>)}
-          </div>
-        )}
-      </Card>
-
-      {/* 状态流转 — 流式期间不渲染 */}
-      {!isStreaming && (
-        <Card style={{ padding: 18, gridColumn: 'span 2' }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>状态流转</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {(['待筛选', '初筛通过', '面试中', '已录用', '已淘汰'] as const).map((s) => (
-              <Btn key={s} variant={c.status === s ? 'primary' : 'secondary'} onClick={() => onUpdateStatus(s)}>{s}</Btn>
-            ))}
-          </div>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16, maxWidth: 1200, alignItems: 'start' }}>
+      {/* ── Left column ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* AI 评语 */}
+        <Card style={{ padding: 18 }}>
+          <SectionLabel>AI 评语</SectionLabel>
+          <p style={{ fontSize: 14, lineHeight: 1.65, color: 'var(--fg)', margin: 0, minHeight: 22, whiteSpace: 'pre-wrap' }}>
+            {summary || placeholder}
+          </p>
         </Card>
-      )}
+
+        {/* 工作经历 */}
+        <Card style={{ padding: 18 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 14 }}>工作经历</div>
+          {works.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {works.map((w: any, i: number) => (
+                <div key={i} style={{ display: 'flex', gap: 12 }}>
+                  <BulletDot color="var(--accent-400)" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>
+                      {w.company || ''}{w.role ? ` · ${w.role}` : ''}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
+                      {w.startDate || ''}{(w.startDate || w.endDate) ? ' — ' : ''}{w.endDate || ''}
+                    </div>
+                    {Array.isArray(w.highlights) && w.highlights.length > 0 && (
+                      <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '6px 0 0 0', padding: 0, listStyle: 'none', lineHeight: 1.6 }}>
+                        {w.highlights.map((h: string, j: number) => (
+                          <li key={j} style={{ display: 'flex', gap: 8, marginBottom: 2 }}>
+                            <span style={{ color: 'var(--fg-subtle)', flexShrink: 0 }}>·</span>
+                            <span>{h}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* 教育背景 */}
+        <Card style={{ padding: 18 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 14 }}>教育背景</div>
+          {edus.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {edus.map((e: any, i: number) => (
+                <div key={i} style={{ display: 'flex', gap: 12 }}>
+                  <BulletDot color="var(--info-400)" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{e.school || ''}</div>
+                    <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}>
+                      {e.major || ''}{e.major && e.degree ? ' · ' : ''}{e.degree || ''}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--fg-subtle)', marginTop: 2 }}>
+                      {e.startDate || ''}{(e.startDate || e.endDate) ? ' — ' : ''}{e.endDate || ''}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* 项目经历 */}
+        <Card style={{ padding: 18 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 14 }}>项目经历</div>
+          {prjs.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {prjs.map((p: any, i: number) => (
+                <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent)' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 14, fontWeight: 600 }}>{p.name || ''}</span>
+                    {p.role && <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>· {p.role}</span>}
+                    {(p.startDate || p.endDate) && (
+                      <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
+                        · {p.startDate || ''}{(p.startDate || p.endDate) ? ' — ' : ''}{p.endDate || ''}
+                      </span>
+                    )}
+                    {p.url && typeof p.url === 'string' && p.url.startsWith('http') && (
+                      <a href={p.url} target="_blank" rel="noopener noreferrer"
+                         style={{ fontSize: 12, color: 'var(--accent)', marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <I.ArrowR size={12} />
+                        {(() => { try { return new URL(p.url).host; } catch { return p.url; } })()}
+                      </a>
+                    )}
+                  </div>
+                  {Array.isArray(p.techStack) && p.techStack.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                      {p.techStack.map((t: string, j: number) => <SkillTag key={j}>{t}</SkillTag>)}
+                    </div>
+                  )}
+                  {p.description && (
+                    <div style={{ fontSize: 13, color: 'var(--fg)', marginTop: 8, lineHeight: 1.6 }}>{p.description}</div>
+                  )}
+                  {Array.isArray(p.highlights) && p.highlights.length > 0 && (
+                    <ul style={{ fontSize: 12, color: 'var(--fg-muted)', margin: '8px 0 0 0', padding: 0, listStyle: 'none', lineHeight: 1.65 }}>
+                      {p.highlights.map((h: string, j: number) => (
+                        <li key={j} style={{ display: 'flex', gap: 8, marginBottom: 2 }}>
+                          <span style={{ color: 'var(--fg-subtle)', flexShrink: 0 }}>·</span>
+                          <span>{h}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* ── Right panel ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* JD 匹配面板 */}
+        <JdMatchPanel
+          candidateId={c.id}
+          extractionStatus={c.extractionStatus}
+          initialMatchResults={c.matchResults ?? []}
+        />
+
+        {/* 技能 */}
+        <Card style={{ padding: 18 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>技能</div>
+          {skills.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--fg-subtle)' }}>{placeholder}</div>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {skills.map((s: string, i: number) => <SkillTag key={i}>{s}</SkillTag>)}
+            </div>
+          )}
+        </Card>
+
+        {/* 工作亮点 */}
+        {allHighlights.length > 0 && (
+          <Card style={{ padding: 18 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>工作亮点</div>
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {allHighlights.map((h, i) => (
+                <li key={i} style={{ display: 'flex', gap: 8, fontSize: 12, color: 'var(--fg-muted)', lineHeight: 1.55 }}>
+                  <span style={{ color: 'var(--accent-400)', flexShrink: 0, marginTop: 2 }}>·</span>
+                  <span>{h}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+
+        {/* 状态流转 */}
+        {!isStreaming && (
+          <Card style={{ padding: 18 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 12 }}>状态流转</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {(['待筛选', '初筛通过', '面试中', '已录用', '已淘汰'] as const).map((s) => (
+                <Btn key={s} size="sm" variant={c.status === s ? 'primary' : 'secondary'} onClick={() => onUpdateStatus(s)}>{s}</Btn>
+              ))}
+            </div>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

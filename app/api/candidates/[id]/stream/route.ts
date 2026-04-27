@@ -1,14 +1,17 @@
 // app/api/candidates/[id]/stream/route.ts
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { candidates } from '@/lib/db/schema';
 import * as bus from '@/lib/extraction/event-bus';
+import { getUserFromRequest } from '@/lib/auth/session';
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(req: Request, ctx: Ctx) {
+  const user = getUserFromRequest(req);
+  if (!user) return new Response('unauthorized', { status: 401 });
   const { id } = await ctx.params;
-  const row = db.select().from(candidates).where(eq(candidates.id, id)).get();
+  const row = db.select().from(candidates).where(and(eq(candidates.id, id), eq(candidates.userId, user.id))).get();
   if (!row) return new Response('not_found', { status: 404 });
 
   const encoder = new TextEncoder();

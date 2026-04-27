@@ -3,18 +3,22 @@ import { NextResponse } from 'next/server';
 import { and, desc, asc, eq, like, or, SQL } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { candidates, CANDIDATE_STATUS } from '@/lib/db/schema';
+import { getUserFromRequest } from '@/lib/auth/session';
 
 const VALID_SORTS = ['recent', 'oldest', 'name'] as const;
 type SortOpt = typeof VALID_SORTS[number];
 
 export async function GET(req: Request) {
+  const user = getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
   const url = new URL(req.url);
   const status = url.searchParams.get('status');
   const q = url.searchParams.get('q')?.trim();
   const sortRaw = (url.searchParams.get('sort') ?? 'recent') as SortOpt;
   const sort: SortOpt = (VALID_SORTS as readonly string[]).includes(sortRaw) ? sortRaw : 'recent';
 
-  const wheres: SQL[] = [];
+  const wheres: SQL[] = [eq(candidates.userId, user.id)];
   if (status && (CANDIDATE_STATUS as readonly string[]).includes(status)) {
     wheres.push(eq(candidates.status, status as any));
   }
@@ -33,7 +37,7 @@ export async function GET(req: Request) {
                         desc(candidates.createdAt);
 
   const items = db.select().from(candidates)
-    .where(wheres.length ? and(...wheres) : undefined)
+    .where(and(...wheres))
     .orderBy(orderBy)
     .all();
 

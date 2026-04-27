@@ -1,6 +1,7 @@
 // components/UploadClient.tsx
 'use client';
 import React, { useRef, useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
 import pLimit from 'p-limit';
 import { Sidebar, TopBar, Btn, Badge, Card } from './ui';
 import { I } from './icons';
@@ -28,7 +29,9 @@ const STATUS_META: Record<UploadStatus, { label: string; tone: 'neutral' | 'info
 
 const limiter = pLimit(5);
 
-export default function UploadClient() {
+import type { User } from '@/lib/db/schema';
+
+export default function UploadClient({ user }: { user: User }) {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +59,13 @@ export default function UploadClient() {
       })
     );
   }, [polled]);
+
+  const kpi = useMemo(() => ({
+    total: items.length,
+    parsed: items.filter(i => i.status === 'parsed').length,
+    active: items.filter(i => i.status === 'extracting' || i.status === 'uploaded' || i.status === 'uploading' || i.status === 'queued').length,
+    error: items.filter(i => i.status === 'error').length,
+  }), [items]);
 
   function onPick(files: FileList | null) {
     if (!files) return;
@@ -130,11 +140,23 @@ export default function UploadClient() {
     }
   }
 
+  function clearDone() {
+    setItems((prev) => prev.filter(i => i.status !== 'parsed'));
+  }
+
+  const KpiCard = ({ label, value, sub }: { label: string; value: number | string; sub?: string }) => (
+    <Card style={{ padding: '16px 20px', flex: 1 }}>
+      <div style={{ fontSize: 11, color: 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 500, marginBottom: 8 }}>{label}</div>
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 600, color: 'var(--fg)', lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: 'var(--fg-subtle)', marginTop: 6 }}>{sub}</div>}
+    </Card>
+  );
+
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 44px)', background: 'var(--bg-sunken)' }}>
-      <Sidebar active="upload" />
+      <Sidebar active="upload" counts={{ upload: items.length }} user={user} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <TopBar title="上传与解析" />
+        <TopBar title="上传与解析" subtitle="拖拽或点击上传简历,AI 自动解析提取结构化信息" />
         <div
           style={{
             padding: '24px 32px',
@@ -148,17 +170,21 @@ export default function UploadClient() {
             width: '100%',
           }}
         >
+          {/* KPI strip */}
+          {items.length > 0 && (
+            <div style={{ display: 'flex', gap: 12 }}>
+              <KpiCard label="本次上传" value={kpi.total} sub="份简历" />
+              <KpiCard label="已解析" value={kpi.parsed} sub="解析完成" />
+              <KpiCard label="解析中" value={kpi.active} sub="处理中" />
+              <KpiCard label="失败" value={kpi.error} sub="需重试" />
+            </div>
+          )}
+
+          {/* Drop zone */}
           <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragging(false);
-              onPick(e.dataTransfer.files);
-            }}
+            onDrop={(e) => { e.preventDefault(); setDragging(false); onPick(e.dataTransfer.files); }}
             style={{
               border: '2px dashed ' + (dragging ? 'var(--accent-500)' : 'var(--border-strong)'),
               background: dragging ? 'var(--accent-bg-subtle)' : 'var(--bg-elevated)',
@@ -171,18 +197,12 @@ export default function UploadClient() {
               transition: 'all var(--dur-base) var(--ease-sift)',
             }}
           >
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 12,
-                background: dragging ? 'var(--accent-500)' : 'var(--accent-bg-subtle)',
-                color: dragging ? 'white' : 'var(--accent-500)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+            <div style={{
+              width: 48, height: 48, borderRadius: 12,
+              background: dragging ? 'var(--accent-500)' : 'var(--accent-bg-subtle)',
+              color: dragging ? 'white' : 'var(--accent-500)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
               <I.Upload size={24} />
             </div>
             <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--fg)', letterSpacing: '-0.01em' }}>
@@ -201,10 +221,7 @@ export default function UploadClient() {
                 accept="application/pdf"
                 multiple
                 hidden
-                onChange={(e) => {
-                  onPick(e.target.files);
-                  e.target.value = '';
-                }}
+                onChange={(e) => { onPick(e.target.files); e.target.value = ''; }}
               />
             </div>
           </div>
@@ -212,21 +229,10 @@ export default function UploadClient() {
           {items.length > 0 && (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: 16, alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg)' }}>上传队列</span>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      color: 'var(--fg-subtle)',
-                      fontFamily: 'var(--font-mono)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    {items.length} 份 · {items.filter((i) => i.status === 'parsed').length} 完成 ·{' '}
-                    {items.filter((i) => i.status === 'error').length} 失败
-                  </span>
-                </div>
+                <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg)' }}>上传队列</span>
+                {kpi.parsed > 0 && (
+                  <Btn size="sm" onClick={clearDone}>清空已完成</Btn>
+                )}
               </div>
 
               <Card style={{ padding: 0, overflow: 'hidden' }}>
@@ -237,81 +243,63 @@ export default function UploadClient() {
                       key={it.key}
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: '1fr 200px 140px 100px 80px',
+                        gridTemplateColumns: 'minmax(0,1fr) 220px 130px 70px',
                         gap: 16,
                         padding: '14px 18px',
                         alignItems: 'center',
                         borderBottom: i < items.length - 1 ? '1px solid var(--border)' : 'none',
                       }}
                     >
-                      <div style={{ minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 500,
-                            color: 'var(--fg)',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {it.file.name}
+                      {/* File name + icon */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--accent-bg-subtle)', color: 'var(--accent-500)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <I.File size={18} />
                         </div>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: 'var(--fg-subtle)',
-                            marginTop: 2,
-                            fontFamily: 'var(--font-mono)',
-                          }}
-                        >
-                          {Math.round(it.file.size / 1024)} KB
-                        </div>
-                        {it.error && (
-                          <div style={{ fontSize: 11, color: 'var(--danger-700)', marginTop: 3 }}>
-                            {it.error}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {it.file.name}
                           </div>
-                        )}
+                          <div style={{ fontSize: 11, color: 'var(--fg-subtle)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
+                            {Math.round(it.file.size / 1024)} KB
+                          </div>
+                          {it.error && <div style={{ fontSize: 11, color: 'var(--danger-700)', marginTop: 3 }}>{it.error}</div>}
+                        </div>
                       </div>
+
+                      {/* Progress */}
                       <div>
                         {(it.status === 'uploading' || it.status === 'extracting') ? (
                           <div>
                             <div style={{ height: 4, background: 'var(--bg-sunken)', borderRadius: 2, overflow: 'hidden' }}>
-                              <div
-                                style={{
-                                  height: '100%',
-                                  width: it.progress + '%',
-                                  background: it.status === 'extracting' ? 'var(--accent-500)' : 'var(--info-500)',
-                                  borderRadius: 2,
-                                }}
-                              />
+                              <div style={{
+                                height: '100%',
+                                width: it.progress + '%',
+                                background: it.status === 'extracting' ? 'var(--accent-500)' : 'var(--info-500)',
+                                borderRadius: 2,
+                                transition: 'width 0.2s',
+                              }} />
                             </div>
-                            <div
-                              style={{
-                                fontSize: 10,
-                                color: 'var(--fg-subtle)',
-                                marginTop: 4,
-                                fontFamily: 'var(--font-mono)',
-                              }}
-                            >
+                            <div style={{ fontSize: 10, color: 'var(--fg-subtle)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>
                               {it.progress}%
                             </div>
                           </div>
                         ) : null}
                       </div>
+
+                      {/* Status */}
                       <div>
-                        <Badge tone={meta.tone} dot>
-                          {meta.label}
-                        </Badge>
+                        <Badge tone={meta.tone} dot>{meta.label}</Badge>
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--fg-subtle)', fontFamily: 'var(--font-mono)' }}>
-                        {it.status === 'parsed' ? '完成' : '—'}
-                      </div>
+
+                      {/* Action */}
                       <div>
                         {it.status === 'error' && (
-                          <Btn size="sm" onClick={() => retry(it)}>
-                            重试
-                          </Btn>
+                          <Btn size="sm" onClick={() => retry(it)}>重试</Btn>
+                        )}
+                        {it.status === 'parsed' && it.id && (
+                          <Link href={`/candidates/${it.id}`} style={{ textDecoration: 'none' }}>
+                            <Btn size="sm" icon={<I.Eye />}>查看</Btn>
+                          </Link>
                         )}
                       </div>
                     </div>

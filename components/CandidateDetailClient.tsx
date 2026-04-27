@@ -227,7 +227,7 @@ function StreamingSections({
                 <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid var(--accent)' }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 14, fontWeight: 600 }}>{p.name || ''}</span>
-                    {p.valueTag && (
+                    {p.valueTag && !(p.valueTag === '独立完成' && p.role) && (
                       <span style={{
                         fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
                         background: p.valueTag === '亮点项目' ? 'var(--accent-bg-subtle)' : 'var(--bg-sunken)',

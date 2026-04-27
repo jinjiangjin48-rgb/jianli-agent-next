@@ -110,7 +110,7 @@ export const SkillTag = ({ variant, strong, children }: SkillTagProps) => {
 type SchoolTier = '985' | '211' | '一本' | '二本' | '三本' | '大专';
 type SchoolTierBadgeProps = { tier?: SchoolTier | null };
 export const SchoolTierBadge = ({ tier }: SchoolTierBadgeProps) => {
-  if (!tier) return null;
+  if (!tier || tier === '大专') return null;
   const styles: Record<SchoolTier, { bg: string; fg: string; border: string }> = {
     '985': { bg: 'var(--warn-100)',         fg: 'var(--warn-700)',   border: 'var(--warn-300)'   },
     '211': { bg: 'var(--info-100)',         fg: 'var(--info-700)',   border: 'var(--info-300)'   },
